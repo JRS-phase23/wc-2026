@@ -92,20 +92,32 @@ create policy "Only admins can update matches" on matches for update using (
 );
 
 alter table competitions enable row level security;
+-- Helpers to break cross-table RLS recursion (competitions ↔ competition_members)
+create or replace function public.is_member_of_competition(p_competition_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.competition_members
+    where competition_id = p_competition_id and user_id = auth.uid()
+  )
+$$;
+create or replace function public.is_competition_admin(p_competition_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.competitions
+    where id = p_competition_id and admin_id = auth.uid()
+  )
+$$;
 create policy "Members can view their competitions" on competitions for select using (
   auth.uid() = admin_id or
-  exists (select 1 from competition_members where competition_id = competitions.id and user_id = auth.uid())
+  public.is_member_of_competition(competitions.id)
 );
 create policy "Users can create competitions" on competitions for insert with check (auth.uid() = admin_id);
 create policy "Admin can update competition" on competitions for update using (auth.uid() = admin_id);
 
 alter table competition_members enable row level security;
 create policy "Members can view competition members" on competition_members for select using (
-  exists (
-    select 1 from competition_members cm
-    where cm.competition_id = competition_members.competition_id and cm.user_id = auth.uid()
-  ) or
-  exists (select 1 from competitions c where c.id = competition_members.competition_id and c.admin_id = auth.uid())
+  public.is_member_of_competition(competition_members.competition_id) or
+  public.is_competition_admin(competition_members.competition_id)
 );
 create policy "Users can join competitions" on competition_members for insert with check (auth.uid() = user_id);
 create policy "Admin can remove members" on competition_members for delete using (
@@ -130,9 +142,9 @@ create policy "Users can delete own picks" on picks for delete using (auth.uid()
 -- ─────────────────────────────────────────────
 
 create or replace function handle_new_user()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into profiles (id, email, team_name)
+  insert into public.profiles (id, email, team_name)
   values (
     new.id,
     new.email,
