@@ -55,7 +55,7 @@ export default function BottomNav() {
               'flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors text-xs font-medium',
               active ? '' : 'opacity-50'
             )}
-            style={{ color: active ? (custom ? '#60A5FA' : 'var(--color-gold)') : 'var(--color-text-dim)' }}
+            style={{ color: active ? (custom ? '#60A5FA' : '#EF4323') : 'var(--color-text-dim)' }}
           >
             {custom ? (
               <SoccerBallIcon size={20} strokeWidth={active ? 2.5 : 2} />

@@ -78,7 +78,7 @@ export default async function DashboardPage() {
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: comp.isAdmin ? 'rgba(245,197,24,0.15)' : 'rgba(255,255,255,0.05)' }}>
+                  style={{ background: comp.isAdmin ? 'rgba(239,67,35,0.15)' : 'rgba(255,255,255,0.05)' }}>
                   {comp.isAdmin ? <Trophy size={18} style={{ color: 'var(--color-gold)' }} /> : <Users size={18} style={{ color: 'var(--color-text-dim)' }} />}
                 </div>
                 <div>

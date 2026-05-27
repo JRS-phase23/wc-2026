@@ -52,7 +52,7 @@ export default function LandingPage() {
       <main className="flex-1 flex flex-col items-center justify-center px-5 py-16 text-center">
         <div className="animate-slide-up max-w-lg">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6"
-            style={{ background: 'rgba(245,197,24,0.12)', color: 'var(--color-gold)', border: '1px solid rgba(245,197,24,0.25)' }}>
+            style={{ background: 'rgba(239,67,35,0.12)', color: 'var(--color-gold)', border: '1px solid rgba(239,67,35,0.25)' }}>
             🏆 FIFA World Cup 2026 · Canada / Mexico / USA
           </div>
 
@@ -92,7 +92,7 @@ export default function LandingPage() {
               style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
             >
               <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3"
-                style={{ background: 'rgba(245,197,24,0.12)' }}>
+                style={{ background: 'rgba(239,67,35,0.12)' }}>
                 <Icon size={18} style={{ color: 'var(--color-gold)' }} />
               </div>
               <h3 className="font-semibold mb-1" style={{ color: 'var(--color-text)' }}>{title}</h3>

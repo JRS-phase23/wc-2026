@@ -4,6 +4,8 @@ export interface Profile {
   id: string
   email: string
   team_name: string
+  icon_key: string
+  icon_url: string | null
   created_at: string
 }
 

@@ -25,7 +25,7 @@ interface Props {
 }
 
 const CHART_COLORS = [
-  '#F5C518', '#60A5FA', '#34D399', '#F87171', '#A78BFA',
+  '#EF4323', '#60A5FA', '#34D399', '#F87171', '#A78BFA',
   '#FB923C', '#38BDF8', '#4ADE80', '#F472B6', '#FACC15',
 ]
 
@@ -59,8 +59,8 @@ export default function StatsClient({ competitionName, playerData, currentUserId
             onClick={() => setActiveTab(tab)}
             className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all capitalize"
             style={{
-              background: activeTab === tab ? 'rgba(245,197,24,0.15)' : 'var(--color-surface)',
-              border: activeTab === tab ? '1px solid rgba(245,197,24,0.4)' : '1px solid var(--color-border)',
+              background: activeTab === tab ? 'rgba(239,67,35,0.15)' : 'var(--color-surface)',
+              border: activeTab === tab ? '1px solid rgba(239,67,35,0.4)' : '1px solid var(--color-border)',
               color: activeTab === tab ? 'var(--color-gold)' : 'var(--color-text-dim)',
             }}
           >
@@ -111,7 +111,7 @@ function TimelineChart({ playerData, currentUserId }: { playerData: PlayerData[]
                 key={p.user_id}
                 type="monotone"
                 dataKey={p.team_name}
-                stroke={p.user_id === currentUserId ? '#F5C518' : CHART_COLORS[i % CHART_COLORS.length]}
+                stroke={p.user_id === currentUserId ? '#EF4323' : CHART_COLORS[i % CHART_COLORS.length]}
                 strokeWidth={p.user_id === currentUserId ? 3 : 1.5}
                 dot={false}
                 activeDot={{ r: 4 }}
@@ -135,7 +135,7 @@ function StageBreakdownChart({ playerData, currentUserId }: { playerData: Player
     isMe: p.user_id === currentUserId,
   }))
 
-  const stageColors = ['#F5C518', '#60A5FA', '#34D399', '#F87171', '#A78BFA', '#FB923C', '#38BDF8']
+  const stageColors = ['#EF4323', '#60A5FA', '#34D399', '#F87171', '#A78BFA', '#FB923C', '#38BDF8']
 
   return (
     <div>
@@ -180,8 +180,8 @@ function AccuracyChart({ playerData, currentUserId }: { playerData: PlayerData[]
             key={p.user_id}
             className="p-4 rounded-2xl"
             style={{
-              background: isMe ? 'rgba(245,197,24,0.06)' : 'var(--color-surface)',
-              border: isMe ? '1px solid rgba(245,197,24,0.25)' : '1px solid var(--color-border)',
+              background: isMe ? 'rgba(239,67,35,0.06)' : 'var(--color-surface)',
+              border: isMe ? '1px solid rgba(239,67,35,0.25)' : '1px solid var(--color-border)',
             }}
           >
             <div className="flex items-center justify-between mb-3">

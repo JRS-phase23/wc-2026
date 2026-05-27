@@ -15,7 +15,7 @@ interface Props {
 }
 
 const RANK_COLORS: Record<number, string> = {
-  1: '#F5C518',
+  1: '#EF4323',
   2: '#C0C0C0',
   3: '#CD7F32',
 }
@@ -43,8 +43,8 @@ export default function LeaderboardTable({ entries, currentUserId }: Props) {
             key={entry.user_id}
             className={cn('flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all')}
             style={{
-              background: isMe ? 'rgba(245,197,24,0.08)' : 'var(--color-surface)',
-              border: isMe ? '1px solid rgba(245,197,24,0.3)' : '1px solid var(--color-border)',
+              background: isMe ? 'rgba(239,67,35,0.08)' : 'var(--color-surface)',
+              border: isMe ? '1px solid rgba(239,67,35,0.3)' : '1px solid var(--color-border)',
             }}
           >
             {/* Rank */}

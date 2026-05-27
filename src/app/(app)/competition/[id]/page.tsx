@@ -132,10 +132,10 @@ export default async function CompetitionPage({ params }: { params: Promise<{ id
       <Link
         href={`/competition/${id}/picks`}
         className="flex items-center justify-between p-4 rounded-2xl mb-6 transition-all hover:opacity-90 active:scale-[0.99]"
-        style={{ background: 'linear-gradient(135deg, rgba(245,197,24,0.2) 0%, rgba(245,197,24,0.08) 100%)', border: '1px solid rgba(245,197,24,0.3)' }}
+        style={{ background: 'linear-gradient(135deg, rgba(239,67,35,0.2) 0%, rgba(239,67,35,0.08) 100%)', border: '1px solid rgba(239,67,35,0.3)' }}
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(245,197,24,0.2)' }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(239,67,35,0.2)' }}>
             <Target size={18} style={{ color: 'var(--color-gold)' }} />
           </div>
           <div>

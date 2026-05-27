@@ -38,8 +38,8 @@ export default function AdminClient({ competitionId, competitionName, joinCode, 
             onClick={() => setTab(t)}
             className="flex items-center gap-1.5 flex-1 justify-center py-2.5 rounded-xl text-sm font-medium transition-all"
             style={{
-              background: tab === t ? 'rgba(245,197,24,0.15)' : 'var(--color-surface)',
-              border: tab === t ? '1px solid rgba(245,197,24,0.4)' : '1px solid var(--color-border)',
+              background: tab === t ? 'rgba(239,67,35,0.15)' : 'var(--color-surface)',
+              border: tab === t ? '1px solid rgba(239,67,35,0.4)' : '1px solid var(--color-border)',
               color: tab === t ? 'var(--color-gold)' : 'var(--color-text-dim)',
             }}
           >
@@ -78,8 +78,8 @@ function ResultsTab({ matches }: { matches: Match[] }) {
             <button key={stage} onClick={() => setActiveStage(stage)}
               className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
               style={{
-                background: activeStage === stage ? 'rgba(245,197,24,0.15)' : 'var(--color-surface)',
-                border: activeStage === stage ? '1px solid rgba(245,197,24,0.4)' : '1px solid var(--color-border)',
+                background: activeStage === stage ? 'rgba(239,67,35,0.15)' : 'var(--color-surface)',
+                border: activeStage === stage ? '1px solid rgba(239,67,35,0.4)' : '1px solid var(--color-border)',
                 color: activeStage === stage ? 'var(--color-gold)' : 'var(--color-text-dim)',
               }}>
               {STAGE_LABELS[stage]} {done}/{count}

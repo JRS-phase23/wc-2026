@@ -11,12 +11,13 @@ export default async function PicksPage({ params }: { params: Promise<{ id: stri
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: comp } = await supabase
-    .from('competitions')
-    .select('id, name')
-    .eq('id', id)
-    .single()
+  const [{ data: comp }, { data: profileData }] = await Promise.all([
+    supabase.from('competitions').select('id, name').eq('id', id).single(),
+    supabase.from('profiles').select('team_name').eq('id', user.id).single(),
+  ])
   if (!comp) notFound()
+
+  const teamName = profileData?.team_name ?? 'My Picks'
 
   // Verify membership
   const { data: membership } = await supabase
@@ -58,6 +59,7 @@ export default async function PicksPage({ params }: { params: Promise<{ id: stri
     <PicksClient
       competitionId={id}
       competitionName={comp.name}
+      teamName={teamName}
       userId={user.id}
       matches={allMatches}
       existingPicks={(existingPicks ?? []) as Pick[]}

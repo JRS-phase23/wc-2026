@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 interface Props {
   competitionId: string
   competitionName: string
+  teamName: string
   userId: string
   matches: Match[]
   existingPicks: Pick[]
@@ -29,7 +30,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 type StageView = 'picks' | 'standings'
 
 export default function PicksClient({
-  competitionId, competitionName, userId, matches, existingPicks, stageLocks, stageSubmissions
+  competitionId, competitionName, teamName, userId, matches, existingPicks, stageLocks, stageSubmissions
 }: Props) {
   const router = useRouter()
 
@@ -180,7 +181,7 @@ export default function PicksClient({
     <div className="max-w-lg mx-auto px-4 py-6">
       {/* Header */}
       <div className="mb-5 animate-fade-in">
-        <h1 className="text-xl font-bold" style={{ color: 'var(--color-text)' }}>My Picks</h1>
+        <h1 className="text-xl font-bold" style={{ color: 'var(--color-text)' }}>{teamName}</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-dim)' }}>{competitionName}</p>
       </div>
 
@@ -216,10 +217,10 @@ export default function PicksClient({
               )}
               style={{
                 background: activeStage === stage
-                  ? isSubmitted ? 'rgba(0,135,90,0.2)' : 'rgba(245,197,24,0.15)'
+                  ? isSubmitted ? 'rgba(0,135,90,0.2)' : 'rgba(239,67,35,0.15)'
                   : 'var(--color-surface)',
                 border: activeStage === stage
-                  ? isSubmitted ? '1px solid rgba(0,135,90,0.5)' : '1px solid rgba(245,197,24,0.4)'
+                  ? isSubmitted ? '1px solid rgba(0,135,90,0.5)' : '1px solid rgba(239,67,35,0.4)'
                   : isSubmitted ? '1px solid rgba(0,135,90,0.3)' : '1px solid var(--color-border)',
                 color: activeStage === stage
                   ? isSubmitted ? 'var(--color-green-score)' : 'var(--color-gold)'
@@ -348,7 +349,7 @@ export default function PicksClient({
           {!locked && submitted && editingStage === activeStage && (
             <div className="mt-8 pb-4">
               <div className="px-4 py-3 rounded-xl mb-3 text-sm"
-                style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.2)', color: 'var(--color-gold)' }}>
+                style={{ background: 'rgba(239,67,35,0.08)', border: '1px solid rgba(239,67,35,0.2)', color: 'var(--color-gold)' }}>
                 You&apos;re editing previously submitted picks. Re-submit when you&apos;re done.
               </div>
               <button
@@ -598,7 +599,7 @@ function MatchPickCard({ match, draft, error, locked, onDraft, onAdvancing, onSa
     if (exact)
       resultBadge = <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(0,135,90,0.2)', color: 'var(--color-green-score)' }}>Exact ✓</span>
     else if (actualResult === pickResult)
-      resultBadge = <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,197,24,0.15)', color: 'var(--color-gold)' }}>Result ✓</span>
+      resultBadge = <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(239,67,35,0.15)', color: 'var(--color-gold)' }}>Result ✓</span>
     else
       resultBadge = <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(229,57,53,0.1)', color: '#ef5350' }}>Miss</span>
   }
@@ -703,8 +704,8 @@ function MatchPickCard({ match, draft, error, locked, onDraft, onAdvancing, onSa
                 onClick={() => { onAdvancing(team.id); onSave() }}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm transition-all"
                 style={{
-                  background: draft?.advancing === team.id ? 'rgba(245,197,24,0.2)' : 'var(--color-surface-2)',
-                  border: draft?.advancing === team.id ? '1px solid rgba(245,197,24,0.5)' : '1px solid var(--color-border)',
+                  background: draft?.advancing === team.id ? 'rgba(239,67,35,0.2)' : 'var(--color-surface-2)',
+                  border: draft?.advancing === team.id ? '1px solid rgba(239,67,35,0.5)' : '1px solid var(--color-border)',
                   color: draft?.advancing === team.id ? 'var(--color-gold)' : 'var(--color-text)',
                 }}>
                 {team.flag_code && <img src={getFlagUrl(team.flag_code)} alt="" className="w-4 h-3 object-cover rounded-sm" />}
