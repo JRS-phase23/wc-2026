@@ -92,3 +92,29 @@ export interface PickWithMatch extends Pick {
   match: Match
   scored?: ScoredPick
 }
+
+export interface StageSubmission {
+  competition_id: string
+  user_id: string
+  stage: Stage
+  submitted_at: string
+}
+
+// World Cup standings types
+export interface GroupStanding {
+  team: Team
+  played: number
+  won: number
+  drawn: number
+  lost: number
+  goals_for: number
+  goals_against: number
+  goal_diff: number
+  points: number
+}
+
+export interface GroupData {
+  letter: string
+  standings: GroupStanding[]
+  matches: Match[]  // completed matches for H2H matrix
+}

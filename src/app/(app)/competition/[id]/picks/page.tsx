@@ -1,9 +1,9 @@
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { STAGE_LABELS, STAGE_ORDER } from '@/lib/scoring'
+import { STAGE_ORDER } from '@/lib/scoring'
 import { isStageLocked } from '@/lib/utils'
 import PicksClient from '@/components/competition/PicksClient'
-import type { Match, Pick, Stage } from '@/types'
+import type { Match, Pick, Stage, StageSubmission } from '@/types'
 
 export default async function PicksPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -33,16 +33,22 @@ export default async function PicksPage({ params }: { params: Promise<{ id: stri
     .select('*, home_team:teams!matches_home_team_id_fkey(id,name,flag_code,group_letter,group_position), away_team:teams!matches_away_team_id_fkey(id,name,flag_code,group_letter,group_position)')
     .order('match_number')
 
-  // Load user's picks for this competition
+  // Load user's picks
   const { data: existingPicks } = await supabase
     .from('picks')
     .select('*')
     .eq('competition_id', id)
     .eq('user_id', user.id)
 
+  // Load stage submissions for this user/competition
+  const { data: stageSubmissions } = await supabase
+    .from('stage_submissions')
+    .select('*')
+    .eq('competition_id', id)
+    .eq('user_id', user.id)
+
   const allMatches = (matches ?? []) as Match[]
 
-  // Determine which stages are locked
   const stageLocks: Record<string, boolean> = {}
   for (const stage of STAGE_ORDER) {
     stageLocks[stage] = isStageLocked(allMatches, stage)
@@ -56,6 +62,7 @@ export default async function PicksPage({ params }: { params: Promise<{ id: stri
       matches={allMatches}
       existingPicks={(existingPicks ?? []) as Pick[]}
       stageLocks={stageLocks}
+      stageSubmissions={(stageSubmissions ?? []) as StageSubmission[]}
     />
   )
 }
