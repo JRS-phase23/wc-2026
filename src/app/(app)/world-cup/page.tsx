@@ -70,60 +70,60 @@ function GroupCard({ group }: { group: GroupData }) {
       {/* Standings table — slate/neutral palette (not gold) */}
       <div className="rounded-2xl overflow-hidden mb-3"
         style={{ background: '#0F172A', border: '1px solid #1E293B' }}>
-        {/* Header */}
-        <div className="grid text-xs font-semibold uppercase tracking-wide px-3 py-2"
-          style={{ gridTemplateColumns: '1fr repeat(7, auto)', gap: '0 12px', color: '#475569', borderBottom: '1px solid #1E293B' }}>
-          <span>Team</span>
-          <span className="text-right">P</span>
-          <span className="text-right">W</span>
-          <span className="text-right">D</span>
-          <span className="text-right">L</span>
-          <span className="text-right">GF</span>
-          <span className="text-right">GD</span>
-          <span className="text-right font-bold" style={{ color: '#60A5FA' }}>Pts</span>
-        </div>
-
-        {group.standings.length === 0 ? (
-          <p className="px-3 py-4 text-xs text-center" style={{ color: '#475569' }}>
-            No results yet
-          </p>
-        ) : group.standings.map((row, i) => (
-          <div key={row.team.id}
-            className="grid items-center px-3 py-2.5"
-            style={{
-              gridTemplateColumns: '1fr repeat(7, auto)',
-              gap: '0 12px',
-              borderTop: i > 0 ? '1px solid #1E293B' : undefined,
-              background: i < 2 ? 'rgba(96,165,250,0.04)' : undefined,
-            }}>
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-xs font-bold w-4 flex-shrink-0" style={{ color: i < 2 ? '#60A5FA' : '#475569' }}>
-                {i + 1}
-              </span>
-              {row.team.flag_code && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={getFlagUrl(row.team.flag_code)} alt="" className="w-5 h-3.5 object-cover rounded-sm flex-shrink-0" />
-              )}
-              <span className="text-sm font-medium truncate" style={{ color: '#E2E8F0' }}>
-                {row.team.name}
-              </span>
-              {i < 2 && row.played > 0 && (
-                <span className="text-xs px-1 rounded" style={{ background: 'rgba(96,165,250,0.15)', color: '#60A5FA', fontSize: 9 }}>Q</span>
-              )}
-            </div>
-            <span className="text-xs text-right" style={{ color: '#94A3B8' }}>{row.played}</span>
-            <span className="text-xs text-right" style={{ color: '#94A3B8' }}>{row.won}</span>
-            <span className="text-xs text-right" style={{ color: '#94A3B8' }}>{row.drawn}</span>
-            <span className="text-xs text-right" style={{ color: '#94A3B8' }}>{row.lost}</span>
-            <span className="text-xs text-right" style={{ color: '#94A3B8' }}>{row.goals_for}</span>
-            <span className="text-xs text-right" style={{
-              color: row.goal_diff > 0 ? '#4ADE80' : row.goal_diff < 0 ? '#F87171' : '#94A3B8'
-            }}>
-              {row.goal_diff > 0 ? '+' : ''}{row.goal_diff}
-            </span>
-            <span className="text-sm text-right font-bold" style={{ color: '#60A5FA' }}>{row.points}</span>
-          </div>
-        ))}
+        <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid #1E293B' }}>
+              <th className="text-left px-3 py-2 font-semibold uppercase tracking-wide" style={{ color: '#475569' }}>Team</th>
+              {['P','W','D','L','GF','GD'].map(h => (
+                <th key={h} className="text-right px-2 py-2 font-semibold uppercase tracking-wide w-8" style={{ color: '#475569' }}>{h}</th>
+              ))}
+              <th className="text-right px-3 py-2 font-bold uppercase tracking-wide w-10" style={{ color: '#60A5FA' }}>Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {group.standings.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-3 py-4 text-center" style={{ color: '#475569' }}>
+                  No results yet
+                </td>
+              </tr>
+            ) : group.standings.map((row, i) => (
+              <tr key={row.team.id} style={{
+                borderTop: i > 0 ? '1px solid #1E293B' : undefined,
+                background: i < 2 ? 'rgba(96,165,250,0.04)' : undefined,
+              }}>
+                <td className="px-3 py-2.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs font-bold w-4 flex-shrink-0" style={{ color: i < 2 ? '#60A5FA' : '#475569' }}>
+                      {i + 1}
+                    </span>
+                    {row.team.flag_code && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={getFlagUrl(row.team.flag_code)} alt="" className="w-5 h-3.5 object-cover rounded-sm flex-shrink-0" />
+                    )}
+                    <span className="text-sm font-medium truncate" style={{ color: '#E2E8F0' }}>
+                      {row.team.name}
+                    </span>
+                    {i < 2 && row.played > 0 && (
+                      <span className="text-xs px-1 rounded" style={{ background: 'rgba(96,165,250,0.15)', color: '#60A5FA', fontSize: 9 }}>Q</span>
+                    )}
+                  </div>
+                </td>
+                <td className="text-right px-2 py-2.5" style={{ color: '#94A3B8' }}>{row.played}</td>
+                <td className="text-right px-2 py-2.5" style={{ color: '#94A3B8' }}>{row.won}</td>
+                <td className="text-right px-2 py-2.5" style={{ color: '#94A3B8' }}>{row.drawn}</td>
+                <td className="text-right px-2 py-2.5" style={{ color: '#94A3B8' }}>{row.lost}</td>
+                <td className="text-right px-2 py-2.5" style={{ color: '#94A3B8' }}>{row.goals_for}</td>
+                <td className="text-right px-2 py-2.5" style={{
+                  color: row.goal_diff > 0 ? '#4ADE80' : row.goal_diff < 0 ? '#F87171' : '#94A3B8'
+                }}>
+                  {row.goal_diff > 0 ? '+' : ''}{row.goal_diff}
+                </td>
+                <td className="text-right px-3 py-2.5 font-bold text-sm" style={{ color: '#60A5FA' }}>{row.points}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* Recent results in this group */}

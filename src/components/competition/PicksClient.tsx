@@ -174,7 +174,7 @@ export default function PicksClient({
     ? [...new Set(stageMatches.map(m => m.home_team?.group_letter ?? '?'))].sort()
     : null
 
-  const groupStandings = activeStage === 'group' ? buildGroupStandings(matches) : null
+  const groupStandings = buildGroupStandings(matches)
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6">
@@ -234,36 +234,31 @@ export default function PicksClient({
         })}
       </div>
 
-      {/* Picks / Standings toggle (group stage only) */}
-      {activeStage === 'group' && (
-        <div className="flex gap-1 mb-5 mt-3">
-          <button
-            onClick={() => setStageView('picks')}
-            className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all')}
-            style={{
-              background: stageView === 'picks' ? 'var(--color-surface-2)' : 'transparent',
-              color: stageView === 'picks' ? 'var(--color-text)' : 'var(--color-text-dim)',
-              border: stageView === 'picks' ? '1px solid var(--color-border)' : '1px solid transparent',
-            }}
-          >
-            <LayoutList size={13} /> My Picks
-          </button>
-          <button
-            onClick={() => setStageView('standings')}
-            className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all')}
-            style={{
-              background: stageView === 'standings' ? 'var(--color-surface-2)' : 'transparent',
-              color: stageView === 'standings' ? 'var(--color-text)' : 'var(--color-text-dim)',
-              border: stageView === 'standings' ? '1px solid var(--color-border)' : '1px solid transparent',
-            }}
-          >
-            <TableProperties size={13} /> Group Standings
-          </button>
-        </div>
-      )}
-
-      {/* Non-group stage: just mb-5 */}
-      {activeStage !== 'group' && <div className="mb-5" />}
+      {/* Picks / Standings toggle — all stages */}
+      <div className="flex gap-1 mb-5 mt-3">
+        <button
+          onClick={() => setStageView('picks')}
+          className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all')}
+          style={{
+            background: stageView === 'picks' ? 'var(--color-surface-2)' : 'transparent',
+            color: stageView === 'picks' ? 'var(--color-text)' : 'var(--color-text-dim)',
+            border: stageView === 'picks' ? '1px solid var(--color-border)' : '1px solid transparent',
+          }}
+        >
+          <LayoutList size={13} /> My Picks
+        </button>
+        <button
+          onClick={() => setStageView('standings')}
+          className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all')}
+          style={{
+            background: stageView === 'standings' ? 'var(--color-surface-2)' : 'transparent',
+            color: stageView === 'standings' ? 'var(--color-text)' : 'var(--color-text-dim)',
+            border: stageView === 'standings' ? '1px solid var(--color-border)' : '1px solid transparent',
+          }}
+        >
+          <TableProperties size={13} /> Group Standings
+        </button>
+      </div>
 
       {/* Lock notice */}
       {locked && (
@@ -405,60 +400,58 @@ function GroupStandingsView({ groupsData }: { groupsData: ReturnType<typeof buil
     <div className="space-y-6">
       {groupsData.map(group => (
         <div key={group.letter}>
-          {/* Standings table */}
           <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-dim)' }}>
             Group {group.letter}
           </h3>
           <div className="rounded-2xl overflow-hidden mb-3" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-            {/* Header */}
-            <div className="grid text-xs font-semibold uppercase tracking-wide px-3 py-2"
-              style={{ gridTemplateColumns: '1fr repeat(7, auto)', gap: '0 12px', color: 'var(--color-text-dim)', borderBottom: '1px solid var(--color-border)' }}>
-              <span>Team</span>
-              <span className="text-right">P</span>
-              <span className="text-right">W</span>
-              <span className="text-right">D</span>
-              <span className="text-right">L</span>
-              <span className="text-right">GF</span>
-              <span className="text-right">GD</span>
-              <span className="text-right font-bold" style={{ color: 'var(--color-gold)' }}>Pts</span>
-            </div>
-            {group.standings.length === 0 ? (
-              <p className="px-3 py-4 text-xs text-center" style={{ color: 'var(--color-text-dim)' }}>
-                No matches completed yet
-              </p>
-            ) : group.standings.map((row, i) => (
-              <div key={row.team.id}
-                className="grid items-center px-3 py-2.5"
-                style={{
-                  gridTemplateColumns: '1fr repeat(7, auto)',
-                  gap: '0 12px',
-                  borderTop: i > 0 ? '1px solid var(--color-border)' : undefined,
-                }}>
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs font-bold w-4 flex-shrink-0" style={{ color: i < 2 ? 'var(--color-gold)' : 'var(--color-text-dim)' }}>
-                    {i + 1}
-                  </span>
-                  {row.team.flag_code && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={getFlagUrl(row.team.flag_code)} alt="" className="w-5 h-3.5 object-cover rounded-sm flex-shrink-0" />
-                  )}
-                  <span className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>
-                    {row.team.name}
-                  </span>
-                </div>
-                <span className="text-xs text-right" style={{ color: 'var(--color-text-dim)' }}>{row.played}</span>
-                <span className="text-xs text-right" style={{ color: 'var(--color-text-dim)' }}>{row.won}</span>
-                <span className="text-xs text-right" style={{ color: 'var(--color-text-dim)' }}>{row.drawn}</span>
-                <span className="text-xs text-right" style={{ color: 'var(--color-text-dim)' }}>{row.lost}</span>
-                <span className="text-xs text-right" style={{ color: 'var(--color-text-dim)' }}>{row.goals_for}</span>
-                <span className="text-xs text-right" style={{
-                  color: row.goal_diff > 0 ? 'var(--color-green-score)' : row.goal_diff < 0 ? '#ef5350' : 'var(--color-text-dim)'
-                }}>
-                  {row.goal_diff > 0 ? '+' : ''}{row.goal_diff}
-                </span>
-                <span className="text-sm text-right font-bold" style={{ color: 'var(--color-gold)' }}>{row.points}</span>
-              </div>
-            ))}
+            <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <th className="text-left px-3 py-2 font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-dim)' }}>Team</th>
+                  {['P','W','D','L','GF','GD'].map(h => (
+                    <th key={h} className="text-right px-2 py-2 font-semibold uppercase tracking-wide w-8" style={{ color: 'var(--color-text-dim)' }}>{h}</th>
+                  ))}
+                  <th className="text-right px-3 py-2 font-bold uppercase tracking-wide w-10" style={{ color: 'var(--color-gold)' }}>Pts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {group.standings.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-3 py-4 text-center" style={{ color: 'var(--color-text-dim)' }}>
+                      No matches completed yet
+                    </td>
+                  </tr>
+                ) : group.standings.map((row, i) => (
+                  <tr key={row.team.id} style={{ borderTop: i > 0 ? '1px solid var(--color-border)' : undefined }}>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs font-bold w-4 flex-shrink-0" style={{ color: i < 2 ? 'var(--color-gold)' : 'var(--color-text-dim)' }}>
+                          {i + 1}
+                        </span>
+                        {row.team.flag_code && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={getFlagUrl(row.team.flag_code)} alt="" className="w-5 h-3.5 object-cover rounded-sm flex-shrink-0" />
+                        )}
+                        <span className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>
+                          {row.team.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="text-right px-2 py-2.5" style={{ color: 'var(--color-text-dim)' }}>{row.played}</td>
+                    <td className="text-right px-2 py-2.5" style={{ color: 'var(--color-text-dim)' }}>{row.won}</td>
+                    <td className="text-right px-2 py-2.5" style={{ color: 'var(--color-text-dim)' }}>{row.drawn}</td>
+                    <td className="text-right px-2 py-2.5" style={{ color: 'var(--color-text-dim)' }}>{row.lost}</td>
+                    <td className="text-right px-2 py-2.5" style={{ color: 'var(--color-text-dim)' }}>{row.goals_for}</td>
+                    <td className="text-right px-2 py-2.5" style={{
+                      color: row.goal_diff > 0 ? 'var(--color-green-score)' : row.goal_diff < 0 ? '#ef5350' : 'var(--color-text-dim)'
+                    }}>
+                      {row.goal_diff > 0 ? '+' : ''}{row.goal_diff}
+                    </td>
+                    <td className="text-right px-3 py-2.5 font-bold text-sm" style={{ color: 'var(--color-gold)' }}>{row.points}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {/* H2H matrix */}
