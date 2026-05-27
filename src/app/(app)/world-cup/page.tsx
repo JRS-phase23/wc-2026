@@ -1,19 +1,102 @@
 import { createClient } from '@/lib/supabase/server'
-import { buildGroupStandings } from '@/lib/utils'
-import { getFlagUrl } from '@/lib/utils'
-import type { Match, GroupData } from '@/types'
+import { buildGroupStandings, getFlagUrl } from '@/lib/utils'
+import type { Match, GroupData, Team } from '@/types'
 
 export const revalidate = 300 // re-fetch every 5 minutes
 
+// football-data.org response shapes
+interface FDTableEntry {
+  team: { id: number; name: string; shortName: string }
+  playedGames: number
+  won: number
+  draw: number
+  lost: number
+  points: number
+  goalsFor: number
+  goalsAgainst: number
+  goalDifference: number
+}
+interface FDStanding { type: string; group: string; table: FDTableEntry[] }
+
 export default async function WorldCupPage() {
   const supabase = await createClient()
-  const { data: matches } = await supabase
-    .from('matches')
-    .select('*, home_team:teams!matches_home_team_id_fkey(id,name,flag_code,group_letter,group_position), away_team:teams!matches_away_team_id_fkey(id,name,flag_code,group_letter,group_position)')
-    .order('match_number')
+
+  const [{ data: matches }, { data: teams }] = await Promise.all([
+    supabase
+      .from('matches')
+      .select('*, home_team:teams!matches_home_team_id_fkey(id,name,flag_code,group_letter,group_position), away_team:teams!matches_away_team_id_fkey(id,name,flag_code,group_letter,group_position)')
+      .order('match_number'),
+    supabase.from('teams').select('id,name,flag_code'),
+  ])
 
   const allMatches = (matches ?? []) as Match[]
-  const groupsData = buildGroupStandings(allMatches)
+  const allTeams = (teams ?? []) as Pick<Team, 'id' | 'name' | 'flag_code'>[]
+
+  let groupsData: GroupData[] = []
+  let dataSource: 'live' | 'db' = 'db'
+
+  // Try football-data.org if key is available
+  const apiKey = process.env.FOOTBALL_DATA_API_KEY
+  if (apiKey) {
+    try {
+      const res = await fetch(
+        'https://api.football-data.org/v4/competitions/2000/standings',
+        {
+          headers: { 'X-Auth-Token': apiKey },
+          next: { revalidate: 300 },
+        }
+      )
+      if (res.ok) {
+        const json = await res.json()
+        // Build name → DB team map for flag lookup
+        const byName = new Map(allTeams.map(t => [t.name.toLowerCase(), t]))
+
+        const totalStandings = ((json.standings ?? []) as FDStanding[]).filter(
+          s => s.type === 'TOTAL'
+        )
+
+        groupsData = totalStandings.map(s => {
+          const letter = s.group.replace('GROUP_', '')
+          const groupMatches = allMatches.filter(
+            m => m.status === 'completed' && m.home_team?.group_letter === letter
+          )
+          return {
+            letter,
+            standings: s.table.map(row => {
+              const dbTeam =
+                byName.get(row.team.name.toLowerCase()) ??
+                byName.get(row.team.shortName.toLowerCase())
+              return {
+                team: {
+                  id: row.team.id,
+                  name: dbTeam?.name ?? row.team.name,
+                  flag_code: dbTeam?.flag_code,
+                } as Team,
+                played: row.playedGames,
+                won: row.won,
+                drawn: row.draw,
+                lost: row.lost,
+                goals_for: row.goalsFor,
+                goals_against: row.goalsAgainst,
+                goal_diff: row.goalDifference,
+                points: row.points,
+              }
+            }),
+            matches: groupMatches,
+          }
+        })
+        dataSource = 'live'
+      }
+    } catch {
+      // fall through to DB
+    }
+  }
+
+  // DB fallback
+  if (groupsData.length === 0) {
+    groupsData = buildGroupStandings(allMatches)
+  }
+
   const hasResults = allMatches.some(m => m.status === 'completed')
 
   return (
@@ -21,7 +104,6 @@ export default async function WorldCupPage() {
       {/* Header — distinct from fantasy theme */}
       <div className="mb-6 animate-fade-in">
         <div className="flex items-center gap-2 mb-1">
-          {/* Official WC badge */}
           <span className="text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded"
             style={{ background: 'rgba(255,255,255,0.08)', color: '#CBD5E1', border: '1px solid rgba(255,255,255,0.12)', letterSpacing: '0.12em' }}>
             Official
@@ -52,8 +134,8 @@ export default async function WorldCupPage() {
 
       {/* Data source note */}
       <p className="text-xs text-center mt-8" style={{ color: '#475569' }}>
-        {process.env.RAPIDAPI_KEY
-          ? 'Live data via API-Football · updates every 5 min'
+        {dataSource === 'live'
+          ? 'Live data via football-data.org · updates every 5 min'
           : 'Data from match results entered by competition admin'}
       </p>
     </div>

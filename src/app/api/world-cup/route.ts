@@ -1,43 +1,92 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { buildGroupStandings } from '@/lib/utils'
-import type { Match } from '@/types'
+import type { Match, Team, GroupData } from '@/types'
 
-// Cache for 5 minutes
 export const revalidate = 300
 
-export async function GET() {
-  const apiKey = process.env.RAPIDAPI_KEY
+interface FDTableEntry {
+  team: { id: number; name: string; shortName: string }
+  playedGames: number
+  won: number
+  draw: number
+  lost: number
+  points: number
+  goalsFor: number
+  goalsAgainst: number
+  goalDifference: number
+}
+interface FDStanding { type: string; group: string; table: FDTableEntry[] }
 
-  // If API key available, try live feed first
+export async function GET() {
+  const supabase = await createClient()
+
+  const [{ data: matches }, { data: teams }] = await Promise.all([
+    supabase
+      .from('matches')
+      .select('*, home_team:teams!matches_home_team_id_fkey(id,name,flag_code,group_letter,group_position), away_team:teams!matches_away_team_id_fkey(id,name,flag_code,group_letter,group_position)')
+      .order('match_number'),
+    supabase.from('teams').select('id,name,flag_code'),
+  ])
+
+  const allMatches = (matches ?? []) as Match[]
+  const allTeams = (teams ?? []) as Pick<Team, 'id' | 'name' | 'flag_code'>[]
+
+  const apiKey = process.env.FOOTBALL_DATA_API_KEY
   if (apiKey) {
     try {
       const res = await fetch(
-        'https://api-football-v1.p.rapidapi.com/v3/standings?league=1&season=2026',
+        'https://api.football-data.org/v4/competitions/2000/standings',
         {
-          headers: {
-            'x-rapidapi-host': 'api-football-v1.p.rapidapi.com',
-            'x-rapidapi-key': apiKey,
-          },
+          headers: { 'X-Auth-Token': apiKey },
           next: { revalidate: 300 },
         }
       )
       if (res.ok) {
-        const data = await res.json()
-        return NextResponse.json({ source: 'live', data: data.response })
+        const json = await res.json()
+        const byName = new Map(allTeams.map(t => [t.name.toLowerCase(), t]))
+        const totalStandings = ((json.standings ?? []) as FDStanding[]).filter(
+          s => s.type === 'TOTAL'
+        )
+
+        const groupsData: GroupData[] = totalStandings.map(s => {
+          const letter = s.group.replace('GROUP_', '')
+          const groupMatches = allMatches.filter(
+            m => m.status === 'completed' && m.home_team?.group_letter === letter
+          )
+          return {
+            letter,
+            standings: s.table.map(row => {
+              const dbTeam =
+                byName.get(row.team.name.toLowerCase()) ??
+                byName.get(row.team.shortName.toLowerCase())
+              return {
+                team: {
+                  id: row.team.id,
+                  name: dbTeam?.name ?? row.team.name,
+                  flag_code: dbTeam?.flag_code,
+                } as Team,
+                played: row.playedGames,
+                won: row.won,
+                drawn: row.draw,
+                lost: row.lost,
+                goals_for: row.goalsFor,
+                goals_against: row.goalsAgainst,
+                goal_diff: row.goalDifference,
+                points: row.points,
+              }
+            }),
+            matches: groupMatches,
+          }
+        })
+
+        return NextResponse.json({ source: 'live', data: groupsData })
       }
     } catch {
-      // fall through to DB data
+      // fall through to DB
     }
   }
 
-  // Fall back to DB-calculated standings
-  const supabase = await createClient()
-  const { data: matches } = await supabase
-    .from('matches')
-    .select('*, home_team:teams!matches_home_team_id_fkey(id,name,flag_code,group_letter,group_position), away_team:teams!matches_away_team_id_fkey(id,name,flag_code,group_letter,group_position)')
-    .order('match_number')
-
-  const groupStandings = buildGroupStandings((matches ?? []) as Match[])
+  const groupStandings = buildGroupStandings(allMatches)
   return NextResponse.json({ source: 'db', data: groupStandings })
 }
