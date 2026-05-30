@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -39,9 +40,11 @@ export default function SignupPage() {
       <div className="w-full max-w-sm animate-slide-up">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-4">
-            <span className="text-2xl">⚽</span>
-            <span className="font-bold text-xl" style={{ color: 'var(--color-gold)' }}>WC 2026 Pick&apos;em</span>
+          <Link href="/" className="inline-flex flex-col items-center gap-2 mb-5">
+            <Image src="/phase23-logo.svg" alt="Phase23" width={120} height={14} style={{ height: 'auto' }} priority />
+            <span className="text-xs font-medium tracking-wide" style={{ color: 'var(--color-text-dim)' }}>
+              World Cup Pick&apos;em
+            </span>
           </Link>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>Create your team</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--color-text-dim)' }}>Free to join · No credit card</p>
@@ -113,7 +116,7 @@ export default function SignupPage() {
             type="submit"
             disabled={loading}
             className="w-full py-3.5 rounded-xl font-bold text-sm transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
-            style={{ background: 'var(--color-gold)', color: '#0A0A0F' }}
+            style={{ background: 'var(--color-gold)', color: '#fff' }}
           >
             {loading ? 'Creating account…' : 'Create team & join →'}
           </button>

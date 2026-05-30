@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Trophy, Users, BarChart3, Zap } from 'lucide-react'
 
 const features = [
@@ -28,11 +29,10 @@ export default function LandingPage() {
   return (
     <div className="min-h-dvh flex flex-col" style={{ background: 'var(--color-bg)' }}>
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">⚽</span>
-          <span className="font-bold text-lg tracking-tight" style={{ color: 'var(--color-gold)' }}>WC 2026</span>
-          <span className="font-light text-sm" style={{ color: 'var(--color-text-dim)' }}>Pick&apos;em</span>
+      <header className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="flex items-center gap-3">
+          <Image src="/phase23-logo.svg" alt="Phase23" width={88} height={10} style={{ height: 'auto' }} priority />
+          <span className="text-xs font-medium hidden sm:block" style={{ color: 'var(--color-text-dim)' }}>World Cup Pick&apos;em</span>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/login" className="text-sm px-4 py-2 rounded-lg transition-colors" style={{ color: 'var(--color-text-dim)' }}>
@@ -41,7 +41,7 @@ export default function LandingPage() {
           <Link
             href="/signup"
             className="text-sm px-4 py-2 rounded-lg font-semibold transition-all hover:opacity-90 active:scale-95"
-            style={{ background: 'var(--color-gold)', color: '#0A0A0F' }}
+            style={{ background: 'var(--color-gold)', color: '#fff' }}
           >
             Join free
           </Link>
@@ -69,7 +69,7 @@ export default function LandingPage() {
             <Link
               href="/signup"
               className="px-6 py-3.5 rounded-xl font-bold text-base transition-all hover:opacity-90 active:scale-95"
-              style={{ background: 'var(--color-gold)', color: '#0A0A0F' }}
+              style={{ background: 'var(--color-gold)', color: '#fff' }}
             >
               Create your team →
             </Link>
@@ -124,7 +124,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="text-center py-6 text-xs" style={{ color: 'var(--color-text-dim)', borderTop: '1px solid var(--color-border)' }}>
-        WC 2026 Pick&apos;em · Not affiliated with FIFA
+        Phase23 World Cup Pick&apos;em · Not affiliated with FIFA
       </footer>
     </div>
   )
