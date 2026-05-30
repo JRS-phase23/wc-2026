@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 
 export default function SignupPage() {
   const router = useRouter()
+  const [next] = useState(() => typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') ?? '/dashboard' : '/dashboard')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [teamName, setTeamName] = useState('')
@@ -30,7 +31,7 @@ export default function SignupPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      router.push(next)
       router.refresh()
     }
   }

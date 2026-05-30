@@ -95,6 +95,13 @@ export interface PickWithMatch extends Pick {
   scored?: ScoredPick
 }
 
+export interface TournamentPrediction {
+  competition_id: string
+  user_id: string
+  team_id: number
+  submitted_at: string
+}
+
 export interface StageSubmission {
   competition_id: string
   user_id: string

@@ -6,7 +6,8 @@ import { STAGE_LABELS, STAGE_ORDER } from '@/lib/scoring'
 import LeaderboardTable from '@/components/competition/LeaderboardTable'
 import StageProgressBar from '@/components/competition/StageProgressBar'
 import type { Stage, Match, Pick } from '@/types'
-import { ClipboardCopy, Settings, Target } from 'lucide-react'
+import { Settings, Target, Eye } from 'lucide-react'
+import { TOURNAMENT_WINNER_BONUS } from '@/lib/scoring'
 import CopyCodeButton from '@/components/competition/CopyCodeButton'
 
 export default async function CompetitionPage({ params }: { params: Promise<{ id: string }> }) {
@@ -38,6 +39,31 @@ export default async function CompetitionPage({ params }: { params: Promise<{ id
     .select('user_id, profiles(team_name)')
     .eq('competition_id', id)
 
+  // Load tournament predictions for this competition
+  const { data: tournamentPreds } = await supabase
+    .from('tournament_predictions')
+    .select('user_id, team_id')
+    .eq('competition_id', id)
+
+  // Determine WC winner from the final match (if completed)
+  const { data: finalMatch } = await supabase
+    .from('matches')
+    .select('home_team_id, away_team_id, home_score, away_score, penalties, penalty_home, penalty_away, status')
+    .eq('stage', 'final')
+    .eq('status', 'completed')
+    .maybeSingle()
+
+  let tournamentWinnerId: number | null = null
+  if (finalMatch && finalMatch.home_score != null && finalMatch.away_score != null) {
+    if (finalMatch.penalties && finalMatch.penalty_home != null && finalMatch.penalty_away != null) {
+      tournamentWinnerId = finalMatch.penalty_home > finalMatch.penalty_away
+        ? finalMatch.home_team_id : finalMatch.away_team_id
+    } else {
+      tournamentWinnerId = finalMatch.home_score > finalMatch.away_score
+        ? finalMatch.home_team_id : finalMatch.away_team_id
+    }
+  }
+
   // Load all completed matches
   const { data: matches } = await supabase
     .from('matches')
@@ -67,15 +93,19 @@ export default async function CompetitionPage({ params }: { params: Promise<{ id
       if (match) stage_points[match.stage] = (stage_points[match.stage] ?? 0) + sp.points
     }
 
-    const completedPicks = scored.filter(s => s.points > 0 || allMatches.find(m => m.id === s.match_id)?.status === 'completed')
     const correctResult = scored.filter(s => s.breakdown.result > 0).length
     const exactScore = scored.filter(s => s.breakdown.exact > 0).length
     const totalCompleted = scored.filter(s => allMatches.find(m => m.id === s.match_id)?.status === 'completed').length
 
+    // Tournament winner bonus
+    const pred = (tournamentPreds ?? []).find(p => p.user_id === m.user_id)
+    const tournamentBonus = tournamentWinnerId && pred?.team_id === tournamentWinnerId
+      ? TOURNAMENT_WINNER_BONUS : 0
+
     return {
       user_id: m.user_id,
       team_name: profile?.team_name ?? 'Unknown',
-      total_points: scored.reduce((sum, s) => sum + s.points, 0),
+      total_points: scored.reduce((sum, s) => sum + s.points, 0) + tournamentBonus,
       stage_points,
       accuracy: {
         total_picks: totalCompleted,
@@ -151,12 +181,40 @@ export default async function CompetitionPage({ params }: { params: Promise<{ id
       {/* Stage progress */}
       <StageProgressBar completedByStage={completedByStage} />
 
+      {/* Pick Reveal links — one per locked stage that has matches */}
+      {STAGE_ORDER.filter(stage => {
+        const s = completedByStage[stage]
+        return s && s.total > 0 && allMatches.some(m => m.stage === stage && m.status !== 'scheduled')
+      }).length > 0 && (
+        <div className="mt-5">
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-dim)' }}>
+            Pick Reveals
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {STAGE_ORDER.filter(stage => {
+              const s = completedByStage[stage]
+              return s && s.total > 0 && allMatches.some(m => m.stage === stage && m.status !== 'scheduled')
+            }).map(stage => (
+              <Link
+                key={stage}
+                href={`/competition/${id}/reveal/${stage}`}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all hover:opacity-80"
+                style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text-dim)' }}
+              >
+                <Eye size={11} />
+                {STAGE_LABELS[stage]}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Leaderboard */}
       <div className="mt-6">
         <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-dim)' }}>
           Leaderboard · {leaderboard.length} players
         </p>
-        <LeaderboardTable entries={leaderboard} currentUserId={user.id} />
+        <LeaderboardTable entries={leaderboard} currentUserId={user.id} competitionId={id} />
       </div>
     </div>
   )

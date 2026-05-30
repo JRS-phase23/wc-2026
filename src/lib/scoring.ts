@@ -105,3 +105,5 @@ export const STAGE_LABELS: Record<Stage, string> = {
 }
 
 export const STAGE_ORDER: Stage[] = ['group', 'r32', 'r16', 'qf', 'sf', '3rd', 'final']
+
+export const TOURNAMENT_WINNER_BONUS = 25

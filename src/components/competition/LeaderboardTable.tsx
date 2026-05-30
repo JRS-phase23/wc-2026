@@ -1,5 +1,4 @@
-import { cn } from '@/lib/utils'
-import { ordinal } from '@/lib/utils'
+import Link from 'next/link'
 
 interface Entry {
   user_id: string
@@ -12,6 +11,7 @@ interface Entry {
 interface Props {
   entries: Entry[]
   currentUserId: string
+  competitionId?: string // if provided, rows link to H2H page
 }
 
 const RANK_COLORS: Record<number, string> = {
@@ -20,7 +20,7 @@ const RANK_COLORS: Record<number, string> = {
   3: '#CD7F32',
 }
 
-export default function LeaderboardTable({ entries, currentUserId }: Props) {
+export default function LeaderboardTable({ entries, currentUserId, competitionId }: Props) {
   if (entries.length === 0) {
     return (
       <div className="text-center py-10" style={{ color: 'var(--color-text-dim)' }}>
@@ -38,10 +38,9 @@ export default function LeaderboardTable({ entries, currentUserId }: Props) {
           ? Math.round((entry.accuracy.correct_result / entry.accuracy.total_picks) * 100)
           : null
 
-        return (
+        const inner = (
           <div
-            key={entry.user_id}
-            className={cn('flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all')}
+            className="flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all"
             style={{
               background: isMe ? 'rgba(239,67,35,0.08)' : 'var(--color-surface)',
               border: isMe ? '1px solid rgba(239,67,35,0.3)' : '1px solid var(--color-border)',
@@ -49,10 +48,7 @@ export default function LeaderboardTable({ entries, currentUserId }: Props) {
           >
             {/* Rank */}
             <div className="w-7 text-center flex-shrink-0">
-              <span
-                className="text-sm font-bold"
-                style={{ color: rankColor ?? 'var(--color-text-dim)' }}
-              >
+              <span className="text-sm font-bold" style={{ color: rankColor ?? 'var(--color-text-dim)' }}>
                 {entry.rank <= 3 ? ['🥇', '🥈', '🥉'][entry.rank - 1] : `#${entry.rank}`}
               </span>
             </div>
@@ -70,14 +66,28 @@ export default function LeaderboardTable({ entries, currentUserId }: Props) {
             </div>
 
             {/* Points */}
-            <div className="text-right flex-shrink-0">
+            <div className="text-right flex-shrink-0 flex items-center gap-1.5">
               <span className="text-lg font-bold" style={{ color: isMe ? 'var(--color-gold)' : 'var(--color-text)' }}>
                 {entry.total_points}
               </span>
-              <span className="text-xs ml-1" style={{ color: 'var(--color-text-dim)' }}>pts</span>
+              <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>pts</span>
+              {!isMe && competitionId && (
+                <span className="text-xs ml-1" style={{ color: 'var(--color-text-dim)' }}>›</span>
+              )}
             </div>
           </div>
         )
+
+        // Rival rows are clickable links to H2H
+        if (!isMe && competitionId) {
+          return (
+            <Link key={entry.user_id} href={`/competition/${competitionId}/h2h/${entry.user_id}`}
+              className="block hover:opacity-90 active:scale-[0.99] transition-all">
+              {inner}
+            </Link>
+          )
+        }
+        return <div key={entry.user_id}>{inner}</div>
       })}
     </div>
   )

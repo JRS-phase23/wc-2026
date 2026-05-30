@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { STAGE_ORDER } from '@/lib/scoring'
 import { isStageLocked } from '@/lib/utils'
 import PicksClient from '@/components/competition/PicksClient'
-import type { Match, Pick, Stage, StageSubmission } from '@/types'
+import type { Match, Pick, Stage, StageSubmission, TournamentPrediction, Team } from '@/types'
 
 export default async function PicksPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -28,25 +28,23 @@ export default async function PicksPage({ params }: { params: Promise<{ id: stri
     .single()
   if (!membership) redirect(`/competition/${id}`)
 
-  // Load all matches with teams
-  const { data: matches } = await supabase
-    .from('matches')
-    .select('*, home_team:teams!matches_home_team_id_fkey(id,name,flag_code,group_letter,group_position), away_team:teams!matches_away_team_id_fkey(id,name,flag_code,group_letter,group_position)')
-    .order('match_number')
-
-  // Load user's picks
-  const { data: existingPicks } = await supabase
-    .from('picks')
-    .select('*')
-    .eq('competition_id', id)
-    .eq('user_id', user.id)
-
-  // Load stage submissions for this user/competition
-  const { data: stageSubmissions } = await supabase
-    .from('stage_submissions')
-    .select('*')
-    .eq('competition_id', id)
-    .eq('user_id', user.id)
+  // Load all matches, picks, submissions, teams, and tournament prediction in parallel
+  const [
+    { data: matches },
+    { data: existingPicks },
+    { data: stageSubmissions },
+    { data: teams },
+    { data: tournamentPred },
+  ] = await Promise.all([
+    supabase
+      .from('matches')
+      .select('*, home_team:teams!matches_home_team_id_fkey(id,name,flag_code,group_letter,group_position), away_team:teams!matches_away_team_id_fkey(id,name,flag_code,group_letter,group_position)')
+      .order('match_number'),
+    supabase.from('picks').select('*').eq('competition_id', id).eq('user_id', user.id),
+    supabase.from('stage_submissions').select('*').eq('competition_id', id).eq('user_id', user.id),
+    supabase.from('teams').select('id,name,flag_code,group_letter,group_position').order('group_letter').order('group_position'),
+    supabase.from('tournament_predictions').select('*').eq('competition_id', id).eq('user_id', user.id).maybeSingle(),
+  ])
 
   const allMatches = (matches ?? []) as Match[]
 
@@ -65,6 +63,8 @@ export default async function PicksPage({ params }: { params: Promise<{ id: stri
       existingPicks={(existingPicks ?? []) as Pick[]}
       stageLocks={stageLocks}
       stageSubmissions={(stageSubmissions ?? []) as StageSubmission[]}
+      allTeams={(teams ?? []) as Team[]}
+      tournamentPrediction={(tournamentPred as TournamentPrediction | null) ?? null}
     />
   )
 }

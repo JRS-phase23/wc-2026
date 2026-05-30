@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { STAGE_LABELS, STAGE_ORDER } from '@/lib/scoring'
 import { formatKickoff, formatCountdown, getFlagUrl, buildGroupStandings } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
-import type { Match, Pick, Stage, Team, StageSubmission } from '@/types'
+import type { Match, Pick, Stage, Team, StageSubmission, TournamentPrediction } from '@/types'
 import { Lock, Check, ChevronDown, ChevronUp, Send, Pencil, AlertCircle, LayoutList, TableProperties } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -18,6 +18,8 @@ interface Props {
   existingPicks: Pick[]
   stageLocks: Record<string, boolean>
   stageSubmissions: StageSubmission[]
+  allTeams: Team[]
+  tournamentPrediction: TournamentPrediction | null
 }
 
 interface DraftPick {
@@ -30,7 +32,8 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 type StageView = 'picks' | 'standings'
 
 export default function PicksClient({
-  competitionId, competitionName, teamName, userId, matches, existingPicks, stageLocks, stageSubmissions
+  competitionId, competitionName, teamName, userId, matches, existingPicks, stageLocks, stageSubmissions,
+  allTeams, tournamentPrediction,
 }: Props) {
   const router = useRouter()
 
@@ -63,6 +66,8 @@ export default function PicksClient({
   const [submitBanner, setSubmitBanner] = useState<Stage | null>(null)
   const [editingStage, setEditingStage] = useState<Stage | null>(null)
   const [stageView, setStageView] = useState<StageView>('picks')
+  const [tournamentTeamId, setTournamentTeamId] = useState<number | null>(tournamentPrediction?.team_id ?? null)
+  const [savingTournament, setSavingTournament] = useState(false)
 
   // Debounce timer refs for global save status
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -152,6 +157,19 @@ export default function PicksClient({
       setSaveStatus('saved')
       setTimeout(() => setSubmitBanner(null), 5000)
     }
+  }
+
+  async function saveTournamentPick(teamId: number) {
+    setTournamentTeamId(teamId)
+    setSavingTournament(true)
+    const supabase = createClient()
+    await supabase.from('tournament_predictions').upsert({
+      competition_id: competitionId,
+      user_id: userId,
+      team_id: teamId,
+      submitted_at: new Date().toISOString(),
+    }, { onConflict: 'competition_id,user_id' })
+    setSavingTournament(false)
   }
 
   /** Remove submission record so player can edit again */
@@ -296,6 +314,17 @@ export default function PicksClient({
       {/* PICKS VIEW */}
       {stageView === 'picks' && (
         <>
+          {/* Tournament winner — shown only on group stage, before matches */}
+          {activeStage === 'group' && (
+            <TournamentWinnerPicker
+              teams={allTeams}
+              selectedTeamId={tournamentTeamId}
+              locked={!!stageLocks['group']}
+              saving={savingTournament}
+              onPick={saveTournamentPick}
+            />
+          )}
+
           {activeStage === 'group' && groups ? (
             groups.map(g => (
               <GroupSection
@@ -722,6 +751,88 @@ function MatchPickCard({ match, draft, error, locked, onDraft, onAdvancing, onSa
       )}
       {needsAdvancing && (
         <p className="text-xs mt-1.5" style={{ color: 'var(--color-gold)' }}>Pick advancing team ↑</p>
+      )}
+    </div>
+  )
+}
+
+// ── Tournament winner picker ──────────────────────────────────────────────────
+function TournamentWinnerPicker({
+  teams, selectedTeamId, locked, saving, onPick,
+}: {
+  teams: Team[]
+  selectedTeamId: number | null
+  locked: boolean
+  saving: boolean
+  onPick: (id: number) => void
+}) {
+  const selected = teams.find(t => t.id === selectedTeamId)
+  const groups = [...new Set(teams.map(t => t.group_letter))].sort()
+
+  return (
+    <div className="rounded-2xl mb-6 overflow-hidden"
+      style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+      {/* Header */}
+      <div className="px-4 pt-4 pb-3 flex items-center justify-between"
+        style={{ borderBottom: '1px solid var(--color-border)' }}>
+        <div>
+          <p className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>
+            🏆 Tournament Winner
+          </p>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-dim)' }}>
+            {locked ? 'Locked — picks are final' : `+25 bonus pts · locks at kickoff`}
+          </p>
+        </div>
+        {selected && (
+          <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--color-gold)' }}>
+            {selected.flag_code && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={getFlagUrl(selected.flag_code)} alt="" className="w-5 h-3.5 object-cover rounded-sm" />
+            )}
+            {selected.name}
+            {saving && <span className="animate-pulse ml-1">●</span>}
+          </div>
+        )}
+      </div>
+
+      {locked ? (
+        <div className="px-4 py-3 text-sm" style={{ color: 'var(--color-text-dim)' }}>
+          {selected
+            ? <span>Your pick: <strong style={{ color: 'var(--color-text)' }}>{selected.name}</strong></span>
+            : 'No pick submitted before lock.'}
+        </div>
+      ) : (
+        <div className="px-3 py-3 space-y-3 max-h-64 overflow-y-auto">
+          {groups.map(letter => (
+            <div key={letter}>
+              <p className="text-xs font-bold uppercase tracking-wider mb-1.5 px-1"
+                style={{ color: 'var(--color-text-dim)' }}>Group {letter}</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {teams.filter(t => t.group_letter === letter).map(team => {
+                  const active = team.id === selectedTeamId
+                  return (
+                    <button
+                      key={team.id}
+                      onClick={() => onPick(team.id)}
+                      className="flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium transition-all text-left"
+                      style={{
+                        background: active ? 'rgba(239,67,35,0.15)' : 'var(--color-surface-2)',
+                        border: active ? '1px solid rgba(239,67,35,0.5)' : '1px solid transparent',
+                        color: active ? 'var(--color-gold)' : 'var(--color-text)',
+                      }}
+                    >
+                      {team.flag_code && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={getFlagUrl(team.flag_code)} alt="" className="w-5 h-3.5 object-cover rounded-sm flex-shrink-0" />
+                      )}
+                      <span className="truncate">{team.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
