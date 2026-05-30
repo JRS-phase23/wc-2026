@@ -1,37 +1,28 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2, Lock, Check } from 'lucide-react'
+import { Suspense } from 'react'
 
 function ResetPasswordForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const [ready, setReady] = useState(false)
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
 
+  // Surface any error forwarded from the callback route
   useEffect(() => {
-    const code = searchParams.get('code')
-    if (!code) {
-      setError('Invalid or expired reset link. Please request a new one.')
-      return
+    if (searchParams.get('error') === 'expired') {
+      setError('This reset link has expired or already been used.')
     }
-    const supabase = createClient()
-    supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-      if (error) {
-        setError('This reset link has expired or already been used. Please request a new one.')
-      } else {
-        setReady(true)
-      }
-    })
   }, [searchParams])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -66,20 +57,12 @@ function ResetPasswordForm() {
         <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
           {done ? 'Password updated!' : 'Choose a new password'}
         </h1>
-        {!done && (
+        {!done && !error && (
           <p className="text-sm mt-1" style={{ color: 'var(--color-text-dim)' }}>
             Must be at least 6 characters
           </p>
         )}
       </div>
-
-      {/* Loading while exchanging code */}
-      {!ready && !error && (
-        <div className="flex flex-col items-center gap-3 py-8">
-          <Loader2 size={28} className="animate-spin" style={{ color: 'var(--color-text-dim)' }} />
-          <p className="text-sm" style={{ color: 'var(--color-text-dim)' }}>Verifying reset link…</p>
-        </div>
-      )}
 
       {/* Success */}
       {done && (
@@ -94,8 +77,8 @@ function ResetPasswordForm() {
         </div>
       )}
 
-      {/* Error */}
-      {error && (
+      {/* Expired-link error from callback */}
+      {error && !done && searchParams.get('error') === 'expired' && (
         <div className="space-y-4">
           <div className="px-4 py-3 rounded-xl text-sm"
             style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--color-red-score)', border: '1px solid rgba(248,113,113,0.25)' }}>
@@ -109,8 +92,8 @@ function ResetPasswordForm() {
         </div>
       )}
 
-      {/* Password form */}
-      {ready && !done && (
+      {/* Password form — shown when no error flag in URL */}
+      {!done && searchParams.get('error') !== 'expired' && (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text)' }}>
@@ -168,6 +151,10 @@ function ResetPasswordForm() {
             {loading ? <Loader2 size={15} className="animate-spin" /> : <Lock size={15} />}
             {loading ? 'Updating…' : 'Set new password'}
           </button>
+
+          <p className="text-center text-sm" style={{ color: 'var(--color-text-dim)' }}>
+            <Link href="/login" style={{ color: 'var(--color-text-dim)' }}>Back to sign in</Link>
+          </p>
         </form>
       )}
     </div>
