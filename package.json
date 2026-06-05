@@ -9,7 +9,8 @@
     "seed": "tsx scripts/seed.ts",
     "simulate": "tsx scripts/simulate.ts",
     "teardown": "tsx scripts/teardown.ts",
-    "export-matches": "tsx scripts/export-matches.ts"
+    "export-matches": "tsx scripts/export-matches.ts",
+    "full-simulate": "tsx scripts/full-simulate.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
