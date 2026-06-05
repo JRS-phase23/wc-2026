@@ -136,7 +136,40 @@ async function main() {
 
   const teamsByName = new Map((teams ?? []).map(t => [t.name.toLowerCase(), t.id]))
 
-  // 3. Create / retrieve competition ─────────────────────────────────────────
+  // 3. Create users + picks ───────────────────────────────────────────────────
+  // We create the first user upfront so we have a real admin_id for the competition.
+  const createdUsers: { id: string; email: string; strategy: Strategy; tournamentTeamName: string }[] = []
+
+  async function getOrCreateUser(u: typeof TEST_USERS[0]): Promise<string | null> {
+    const { data: authData, error: authErr } = await adminClient.auth.admin.createUser({
+      email: u.email,
+      password: TEST_PASSWORD,
+      email_confirm: true,
+      user_metadata: { team_name: u.team_name },
+    })
+    if (authErr) {
+      if (authErr.message.toLowerCase().includes('already') || authErr.message.toLowerCase().includes('registered')) {
+        const { data: existing } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
+        const found = existing?.users.find(x => x.email === u.email)
+        if (found) { process.stdout.write('(existing) '); return found.id }
+      }
+      console.log(`❌  ${authErr.message}`)
+      return null
+    }
+    return authData.user.id
+  }
+
+  // Create first user to use as competition admin
+  process.stdout.write(`  Creating ${TEST_USERS[0].team_name}… `)
+  const firstUserId = await getOrCreateUser(TEST_USERS[0])
+  if (!firstUserId) { console.error('❌  Cannot create admin user — aborting'); process.exit(1) }
+  await adminClient.from('profiles').upsert({
+    id: firstUserId, email: TEST_USERS[0].email,
+    team_name: TEST_USERS[0].team_name, icon_key: 'ball-classic',
+  }, { onConflict: 'id' })
+  console.log('✓')
+
+  // 4. Create competition using first user as admin ───────────────────────────
   let { data: comp } = await adminClient
     .from('competitions')
     .select('id')
@@ -144,18 +177,12 @@ async function main() {
     .maybeSingle()
 
   if (!comp) {
-    // We need an admin user — use the first test user we'll create
-    const placeholderAdminId = '00000000-0000-0000-0000-000000000001'
     const { data: newComp, error: compErr } = await adminClient
       .from('competitions')
-      .insert({ name: COMPETITION_NAME, join_code: COMPETITION_CODE, admin_id: placeholderAdminId })
+      .insert({ name: COMPETITION_NAME, join_code: COMPETITION_CODE, admin_id: firstUserId })
       .select('id')
       .single()
-
-    if (compErr) {
-      console.error('❌  Failed to create competition:', compErr.message)
-      process.exit(1)
-    }
+    if (compErr) { console.error('❌  Failed to create competition:', compErr.message); process.exit(1) }
     comp = newComp
     console.log(`✓  Created competition "${COMPETITION_NAME}"`)
   } else {
@@ -164,96 +191,30 @@ async function main() {
 
   const competitionId = comp.id
 
-  // 4. Create users + picks ──────────────────────────────────────────────────
-  const createdUsers: { id: string; email: string; strategy: Strategy; tournamentTeamName: string }[] = []
-
-  for (let i = 0; i < TEST_USERS.length; i++) {
-    const u = TEST_USERS[i]
-    process.stdout.write(`  Creating ${u.team_name}… `)
-
-    // Create auth user (idempotent — get existing if already created)
-    const { data: authData, error: authErr } = await adminClient.auth.admin.createUser({
-      email: u.email,
-      password: TEST_PASSWORD,
-      email_confirm: true,
-      user_metadata: { team_name: u.team_name },
-    })
-
-    let userId: string
-    if (authErr) {
-      if (authErr.message.includes('already been registered')) {
-        // Look up existing user
-        const { data: existing } = await adminClient.auth.admin.listUsers()
-        const found = existing?.users.find(x => x.email === u.email)
-        if (!found) {
-          console.log(`❌  Could not find existing user: ${authErr.message}`)
-          continue
-        }
-        userId = found.id
-        process.stdout.write('(existing) ')
-      } else {
-        console.log(`❌  ${authErr.message}`)
-        continue
-      }
-    } else {
-      userId = authData.user.id
-    }
-
-    // Ensure profile exists
-    await adminClient.from('profiles').upsert({
-      id: userId,
-      email: u.email,
-      team_name: u.team_name,
-      icon_key: 'ball-classic',
-    }, { onConflict: 'id' })
-
-    // Update competition admin to first user if placeholder was used
-    if (i === 0) {
-      await adminClient
-        .from('competitions')
-        .update({ admin_id: userId })
-        .eq('id', competitionId)
-        .eq('admin_id', '00000000-0000-0000-0000-000000000001')
-    }
-
-    // Join competition
+  // Helper: generate + insert picks for any user
+  async function seedUserPicks(userId: string, strategy: Strategy, tournamentTeamName: string, idx: number) {
     await adminClient.from('competition_members').upsert(
       { competition_id: competitionId, user_id: userId },
       { onConflict: 'competition_id,user_id' }
     )
-
-    // Generate picks for all group stage matches
     const groupMatches = matches.filter(m => m.stage === 'group')
-    const pickRows = groupMatches.map((m, idx) => {
-      const { home, away } = generatePick(u.strategy, idx)
+    const pickRows = groupMatches.map((m, matchIdx) => {
+      const { home, away } = generatePick(strategy, matchIdx)
       return {
-        user_id: userId,
-        competition_id: competitionId,
-        match_id: m.id,
-        home_score_pick: home,
-        away_score_pick: away,
-        advancing_team_id: null,
-        updated_at: new Date().toISOString(),
+        user_id: userId, competition_id: competitionId, match_id: m.id,
+        home_score_pick: home, away_score_pick: away,
+        advancing_team_id: null, updated_at: new Date().toISOString(),
       }
     })
-
     if (pickRows.length > 0) {
       const { error: pickErr } = await adminClient
-        .from('picks')
-        .upsert(pickRows, { onConflict: 'user_id,competition_id,match_id' })
-      if (pickErr) {
-        console.log(`⚠️  Pick error: ${pickErr.message}`)
-      }
+        .from('picks').upsert(pickRows, { onConflict: 'user_id,competition_id,match_id' })
+      if (pickErr) console.log(`⚠️  Pick error: ${pickErr.message}`)
     }
-
-    // Also mark group stage as submitted
     await adminClient.from('stage_submissions').upsert(
       { competition_id: competitionId, user_id: userId, stage: 'group' },
       { onConflict: 'competition_id,user_id,stage' }
     )
-
-    // Tournament winner prediction
-    const tournamentTeamName = TOURNAMENT_PICKS[i]
     const tournamentTeamId = teamsByName.get(tournamentTeamName.toLowerCase())
     if (tournamentTeamId) {
       await adminClient.from('tournament_predictions').upsert(
@@ -261,8 +222,24 @@ async function main() {
         { onConflict: 'competition_id,user_id' }
       )
     }
+    createdUsers.push({ id: userId, email: TEST_USERS[idx].email, strategy, tournamentTeamName })
+  }
 
-    createdUsers.push({ id: userId, email: u.email, strategy: u.strategy, tournamentTeamName })
+  // Seed picks for first user
+  await seedUserPicks(firstUserId, TEST_USERS[0].strategy, TOURNAMENT_PICKS[0], 0)
+
+  for (let i = 1; i < TEST_USERS.length; i++) {
+    const u = TEST_USERS[i]
+    process.stdout.write(`  Creating ${u.team_name}… `)
+
+    const userId = await getOrCreateUser(u)
+    if (!userId) continue
+
+    await adminClient.from('profiles').upsert({
+      id: userId, email: u.email, team_name: u.team_name, icon_key: 'ball-classic',
+    }, { onConflict: 'id' })
+
+    await seedUserPicks(userId, u.strategy, TOURNAMENT_PICKS[i], i)
     console.log(`✓`)
   }
 

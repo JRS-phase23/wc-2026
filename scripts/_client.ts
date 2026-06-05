@@ -25,11 +25,16 @@ if (!url || !anon) {
 }
 
 // Warn loudly if this looks like the production project
-if (url.includes('bvlvpucjyoovrdactnew')) {
+if (url.includes('bvlvpucjyoovrdactnew') && process.env.ALLOW_PROD_SEEDING !== 'true') {
   console.error('\n⚠️  SAFETY CHECK FAILED')
   console.error('   .env.local is pointing at the PRODUCTION Supabase project.')
-  console.error('   Switch to your DEV project before running seed/simulate scripts.\n')
+  console.error('   Switch to your DEV project before running seed/simulate scripts.')
+  console.error('   To override for a one-time prod run, set ALLOW_PROD_SEEDING=true in .env.local\n')
   process.exit(1)
+}
+
+if (url.includes('bvlvpucjyoovrdactnew') && process.env.ALLOW_PROD_SEEDING === 'true') {
+  console.log('⚠️  Running against PRODUCTION (ALLOW_PROD_SEEDING=true). Remember to run teardown after.\n')
 }
 
 if (!serviceKey) {
