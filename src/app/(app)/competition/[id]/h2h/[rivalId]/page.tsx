@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { scorePick, STAGE_LABELS, STAGE_ORDER } from '@/lib/scoring'
+import { scorePick, scoreAllPicks, STAGE_LABELS, STAGE_ORDER, TOURNAMENT_WINNER_BONUS } from '@/lib/scoring'
 import { getFlagUrl } from '@/lib/utils'
 import type { Match, Pick, Stage } from '@/types'
 import { ArrowLeft } from 'lucide-react'
@@ -24,37 +24,56 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
   const { data: rivalProfile } = await supabase
     .from('profiles').select('team_name').eq('id', rivalId).single()
 
-  const [{ data: matches }, { data: myPicksData }, { data: rivalPicksData }] = await Promise.all([
+  const [{ data: matches }, { data: myPicksData }, { data: rivalPicksData },
+         { data: myPredData }, { data: rivalPredData }, { data: finalMatchData }] = await Promise.all([
     supabase.from('matches')
       .select('*, home_team:teams!matches_home_team_id_fkey(id,name,flag_code), away_team:teams!matches_away_team_id_fkey(id,name,flag_code)')
       .order('match_number'),
     supabase.from('picks').select('*').eq('competition_id', id).eq('user_id', user.id),
     supabase.from('picks').select('*').eq('competition_id', id).eq('user_id', rivalId),
+    supabase.from('tournament_predictions').select('team_id').eq('competition_id', id).eq('user_id', user.id).maybeSingle(),
+    supabase.from('tournament_predictions').select('team_id').eq('competition_id', id).eq('user_id', rivalId).maybeSingle(),
+    supabase.from('matches').select('home_team_id,away_team_id,home_score,away_score,penalties,penalty_home,penalty_away,status').eq('stage','final').maybeSingle(),
   ])
 
   const allMatches = (matches ?? []) as Match[]
   const myPicks = (myPicksData ?? []) as Pick[]
   const rivalPicks = (rivalPicksData ?? []) as Pick[]
 
-  // Score all picks
-  const myScored = allMatches.map(m => {
-    const pick = myPicks.find(p => p.match_id === m.id)
-    return pick ? scorePick(pick, m) : null
-  })
-  const rivalScored = allMatches.map(m => {
-    const pick = rivalPicks.find(p => p.match_id === m.id)
-    return pick ? scorePick(pick, m) : null
-  })
+  // Determine tournament winner
+  let tournamentWinnerId: number | null = null
+  if (finalMatchData?.status === 'completed') {
+    const fm = finalMatchData as { home_team_id:number; away_team_id:number; home_score:number; away_score:number; penalties:boolean; penalty_home:number|null; penalty_away:number|null }
+    if (fm.penalties && fm.penalty_home != null && fm.penalty_away != null) {
+      tournamentWinnerId = fm.penalty_home > fm.penalty_away ? fm.home_team_id : fm.away_team_id
+    } else {
+      tournamentWinnerId = fm.home_score > fm.away_score ? fm.home_team_id : fm.away_team_id
+    }
+  }
 
-  const myTotal = myScored.reduce((s, p) => s + (p?.points ?? 0), 0)
-  const rivalTotal = rivalScored.reduce((s, p) => s + (p?.points ?? 0), 0)
+  // Score all picks using same logic as leaderboard
+  const myScoredAll = scoreAllPicks(myPicks, allMatches)
+  const rivalScoredAll = scoreAllPicks(rivalPicks, allMatches)
+
+  const myTournamentBonus = tournamentWinnerId && myPredData?.team_id === tournamentWinnerId ? TOURNAMENT_WINNER_BONUS : 0
+  const rivalTournamentBonus = tournamentWinnerId && rivalPredData?.team_id === tournamentWinnerId ? TOURNAMENT_WINNER_BONUS : 0
+
+  const myTotal = myScoredAll.reduce((s, p) => s + p.points, 0) + myTournamentBonus
+  const rivalTotal = rivalScoredAll.reduce((s, p) => s + p.points, 0) + rivalTournamentBonus
+
+  // Build match index for stage breakdown + match-by-match
+  const matchMap = new Map(allMatches.map(m => [m.id, m]))
+  const myScoredMap = new Map(myScoredAll.map(s => [s.match_id, s]))
+  const rivalScoredMap = new Map(rivalScoredAll.map(s => [s.match_id, s]))
 
   const completedMatches = allMatches.filter(m => m.status === 'completed')
 
   // Points by stage
   const stageBreakdown = STAGE_ORDER.map(stage => {
-    const myPts = myScored.reduce((s, sp, i) => s + (allMatches[i].stage === stage ? (sp?.points ?? 0) : 0), 0)
-    const rivalPts = rivalScored.reduce((s, sp, i) => s + (allMatches[i].stage === stage ? (sp?.points ?? 0) : 0), 0)
+    const myPts = myScoredAll.filter(s => matchMap.get(s.match_id)?.stage === stage).reduce((t, s) => t + s.points, 0)
+      + (stage === 'final' ? myTournamentBonus : 0)
+    const rivalPts = rivalScoredAll.filter(s => matchMap.get(s.match_id)?.stage === stage).reduce((t, s) => t + s.points, 0)
+      + (stage === 'final' ? rivalTournamentBonus : 0)
     const hasMatches = allMatches.some(m => m.stage === stage && m.status === 'completed')
     return { stage, myPts, rivalPts, hasMatches }
   }).filter(s => s.hasMatches)
@@ -146,9 +165,8 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
           </p>
           <div className="space-y-2">
             {completedMatches.map(match => {
-              const idx = allMatches.findIndex(m => m.id === match.id)
-              const mySP = myScored[idx]
-              const rivalSP = rivalScored[idx]
+              const mySP = myScoredMap.get(match.id) ?? null
+              const rivalSP = rivalScoredMap.get(match.id) ?? null
 
               return (
                 <div key={match.id} className="rounded-xl overflow-hidden"

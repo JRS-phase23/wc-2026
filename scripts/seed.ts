@@ -197,7 +197,7 @@ async function main() {
       { competition_id: competitionId, user_id: userId },
       { onConflict: 'competition_id,user_id' }
     )
-    const groupMatches = matches.filter(m => m.stage === 'group')
+    const groupMatches = (matches ?? []).filter(m => m.stage === 'group')
     const pickRows = groupMatches.map((m, matchIdx) => {
       const { home, away } = generatePick(strategy, matchIdx)
       return {

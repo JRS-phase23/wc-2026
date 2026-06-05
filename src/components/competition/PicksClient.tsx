@@ -2,11 +2,12 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { STAGE_LABELS, STAGE_ORDER } from '@/lib/scoring'
+import { STAGE_LABELS, STAGE_ORDER, scorePick, getMaxPossiblePoints } from '@/lib/scoring'
 import { formatKickoff, formatCountdown, getFlagUrl, buildGroupStandings } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Match, Pick, Stage, Team, StageSubmission, TournamentPrediction } from '@/types'
-import { Lock, Check, ChevronDown, ChevronUp, Send, Pencil, AlertCircle, LayoutList, TableProperties } from 'lucide-react'
+import { Lock, Check, ChevronDown, ChevronUp, Send, Pencil, AlertCircle, LayoutList, TableProperties, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -199,8 +200,12 @@ export default function PicksClient({
     <div className="max-w-lg mx-auto px-4 py-6">
       {/* Header */}
       <div className="mb-5 animate-fade-in">
+        <Link href={`/competition/${competitionId}`}
+          className="inline-flex items-center gap-1.5 text-xs mb-3"
+          style={{ color: 'var(--color-text-dim)' }}>
+          <ArrowLeft size={13} /> {competitionName}
+        </Link>
         <h1 className="text-xl font-bold" style={{ color: 'var(--color-text)' }}>{teamName}</h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-dim)' }}>{competitionName}</p>
       </div>
 
       {/* Global save status bar */}
@@ -279,6 +284,30 @@ export default function PicksClient({
         </button>
       </div>
 
+      {/* Stage points summary */}
+      {stageView === 'picks' && (() => {
+        const completed = stageMatches.filter(m => m.status === 'completed')
+        if (!completed.length) return null
+        let earned = 0, possible = 0
+        for (const m of completed) {
+          const pick = existingPicks.find(p => p.match_id === m.id)
+          if (pick) earned += scorePick(pick, m).points
+          possible += getMaxPossiblePoints(m)
+        }
+        const pct = possible > 0 ? Math.round((earned / possible) * 100) : 0
+        return (
+          <div className="flex items-center justify-between px-4 py-2.5 rounded-xl mb-4 text-sm"
+            style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
+            <span style={{ color: 'var(--color-text-dim)' }}>
+              {STAGE_LABELS[activeStage]} · {completed.length}/{stageMatches.length} played
+            </span>
+            <span className="font-bold" style={{ color: earned > 0 ? 'var(--color-gold)' : 'var(--color-text-dim)' }}>
+              {earned} <span className="font-normal text-xs" style={{ color: 'var(--color-text-dim)' }}>/ {possible} pts ({pct}%)</span>
+            </span>
+          </div>
+        )
+      })()}
+
       {/* Lock notice */}
       {locked && (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl mb-5 text-sm"
@@ -322,6 +351,7 @@ export default function PicksClient({
               locked={!!stageLocks['group']}
               saving={savingTournament}
               onPick={saveTournamentPick}
+              onClear={() => setTournamentTeamId(null)}
             />
           )}
 
@@ -622,13 +652,16 @@ function MatchPickCard({ match, draft, error, locked, onDraft, onAdvancing, onSa
   let resultBadge: React.ReactNode = null
   if (isCompleted && hasPick && match.home_score != null && match.away_score != null) {
     const ph = parseInt(pickHome), pa = parseInt(pickAway)
+    const exact = ph === match.home_score && pa === match.away_score
     const actualResult = match.home_score > match.away_score ? 'home' : match.home_score < match.away_score ? 'away' : 'draw'
     const pickResult = ph > pa ? 'home' : ph < pa ? 'away' : 'draw'
-    const exact = ph === match.home_score && pa === match.away_score
+    const fakePick: Pick = { ...match as unknown as Pick, home_score_pick: ph, away_score_pick: pa, advancing_team_id: draft?.advancing ?? null }
+    const pts = scorePick(fakePick, match).points
+    const ptsLabel = pts > 0 ? ` +${pts}` : ''
     if (exact)
-      resultBadge = <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(0,135,90,0.2)', color: 'var(--color-green-score)' }}>Exact ✓</span>
+      resultBadge = <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(0,135,90,0.2)', color: 'var(--color-green-score)' }}>Exact ✓{ptsLabel}</span>
     else if (actualResult === pickResult)
-      resultBadge = <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(239,67,35,0.15)', color: 'var(--color-gold)' }}>Result ✓</span>
+      resultBadge = <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(239,67,35,0.15)', color: 'var(--color-gold)' }}>Result ✓{ptsLabel}</span>
     else
       resultBadge = <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(229,57,53,0.1)', color: '#ef5350' }}>Miss</span>
   }
@@ -758,13 +791,14 @@ function MatchPickCard({ match, draft, error, locked, onDraft, onAdvancing, onSa
 
 // ── Tournament winner picker ──────────────────────────────────────────────────
 function TournamentWinnerPicker({
-  teams, selectedTeamId, locked, saving, onPick,
+  teams, selectedTeamId, locked, saving, onPick, onClear,
 }: {
   teams: Team[]
   selectedTeamId: number | null
   locked: boolean
   saving: boolean
   onPick: (id: number) => void
+  onClear: () => void
 }) {
   const selected = teams.find(t => t.id === selectedTeamId)
   const groups = [...new Set(teams.map(t => t.group_letter))].sort()
@@ -795,11 +829,25 @@ function TournamentWinnerPicker({
         )}
       </div>
 
-      {locked ? (
-        <div className="px-4 py-3 text-sm" style={{ color: 'var(--color-text-dim)' }}>
-          {selected
-            ? <span>Your pick: <strong style={{ color: 'var(--color-text)' }}>{selected.name}</strong></span>
-            : 'No pick submitted before lock.'}
+      {locked || selected ? (
+        <div className="px-4 py-3 text-sm flex items-center justify-between">
+          {selected ? (
+            <>
+              <div className="flex items-center gap-2">
+                {selected.flag_code && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={getFlagUrl(selected.flag_code)} alt="" className="w-5 h-3.5 object-cover rounded-sm" />
+                )}
+                <span style={{ color: 'var(--color-text)' }}>{selected.name}</span>
+              </div>
+              {!locked && (
+                <button onClick={onClear}
+                  className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Change</button>
+              )}
+            </>
+          ) : (
+            <span style={{ color: 'var(--color-text-dim)' }}>No pick submitted before lock.</span>
+          )}
         </div>
       ) : (
         <div className="px-3 py-3 space-y-3 max-h-64 overflow-y-auto">

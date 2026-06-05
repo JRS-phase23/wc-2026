@@ -42,9 +42,10 @@ export default async function RevealPage({ params }: { params: Promise<{ id: str
     isMe: m.user_id === user.id,
   })).sort((a, b) => (a.isMe ? -1 : b.isMe ? 1 : 0))
 
-  // Check stage has locked (only reveal after lock)
+  // Reveal once any match in this stage is completed OR the stage has kicked off
   const allMatchesFull = (await supabase.from('matches').select('kickoff_at,stage,status').order('match_number')).data ?? []
-  const locked = isStageLocked(allMatchesFull as Match[], stage as Stage)
+  const stageCompleted = allMatches.some(m => m.status === 'completed')
+  const locked = stageCompleted || isStageLocked(allMatchesFull as Match[], stage as Stage)
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6">

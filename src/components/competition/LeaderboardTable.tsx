@@ -72,7 +72,10 @@ export default function LeaderboardTable({ entries, currentUserId, competitionId
               </span>
               <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>pts</span>
               {!isMe && competitionId && (
-                <span className="text-xs ml-1" style={{ color: 'var(--color-text-dim)' }}>›</span>
+                <span className="text-xs ml-1 px-1.5 py-0.5 rounded"
+                  style={{ background: 'var(--color-surface-2)', color: 'var(--color-text-dim)', fontSize: 10 }}>
+                  H2H
+                </span>
               )}
             </div>
           </div>

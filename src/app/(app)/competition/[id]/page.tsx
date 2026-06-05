@@ -158,6 +158,27 @@ export default async function CompetitionPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
+      {/* Tournament complete banner */}
+      {completedByStage['final']?.done === 1 && (() => {
+        const winner = leaderboard[0]
+        return (
+          <div className="px-4 py-3.5 rounded-2xl mb-5 animate-fade-in"
+            style={{ background: 'linear-gradient(135deg,rgba(239,67,35,0.18),rgba(239,67,35,0.06))', border: '1px solid rgba(239,67,35,0.35)' }}>
+            <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--color-gold)' }}>
+              🏆 Tournament Complete
+            </p>
+            <p className="font-bold" style={{ color: 'var(--color-text)' }}>
+              {winner?.team_name} wins with {winner?.total_points} pts
+            </p>
+            {myEntry && (
+              <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-dim)' }}>
+                You finished #{myEntry.rank} of {leaderboard.length} · {myEntry.total_points} pts
+              </p>
+            )}
+          </div>
+        )
+      })()}
+
       {/* My picks CTA */}
       <Link
         href={`/competition/${id}/picks`}
@@ -171,7 +192,7 @@ export default async function CompetitionPage({ params }: { params: Promise<{ id
           <div>
             <p className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>My Picks</p>
             <p className="text-xs" style={{ color: 'var(--color-text-dim)' }}>
-              {allPicks.filter(p => p.user_id === user.id).length} submitted
+              {myEntry ? `${myEntry.total_points} pts · ${myEntry.accuracy.exact_score} exact scores` : 'View your picks'}
             </p>
           </div>
         </div>
