@@ -70,7 +70,7 @@ async function main() {
 
   // Matches
   sql += `\n-- ── Matches ──────────────────────────────────────────\n`
-  sql += `TRUNCATE matches;\n`
+  sql += `TRUNCATE matches CASCADE;\n`
   for (const m of matches ?? []) {
     sql += `INSERT INTO matches (id, match_number, stage, home_label, away_label, home_team_id, away_team_id, kickoff_at, venue, home_score, away_score, extra_time, penalties, penalty_home, penalty_away, status) VALUES (`
     sql += [
