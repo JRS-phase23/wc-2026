@@ -80,7 +80,13 @@ export default function StatsClient({ competitionName, playerData, currentUserId
 function TimelineChart({ playerData, currentUserId }: { playerData: PlayerData[]; currentUserId: string }) {
   if (playerData.length === 0 || playerData[0].timeline.length === 0) return <EmptyChart />
 
-  // Build unified timeline data
+  // Sort: current user first, then by total points desc
+  const sorted = [...playerData].sort((a, b) => {
+    if (a.user_id === currentUserId) return -1
+    if (b.user_id === currentUserId) return 1
+    return b.total_points - a.total_points
+  })
+
   const matchNumbers = playerData[0].timeline.map(t => t.match_number)
   const data = matchNumbers.map(mn => {
     const point: Record<string, number | string> = { match: `M${mn}` }
@@ -93,8 +99,8 @@ function TimelineChart({ playerData, currentUserId }: { playerData: PlayerData[]
 
   return (
     <div>
-      <p className="text-sm font-semibold mb-4" style={{ color: 'var(--color-text)' }}>Cumulative points over time</p>
-      <div className="w-full" style={{ height: 280 }}>
+      <p className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text)' }}>Cumulative points over time</p>
+      <div className="w-full" style={{ height: 260 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -104,21 +110,41 @@ function TimelineChart({ playerData, currentUserId }: { playerData: PlayerData[]
               contentStyle={{ background: '#1A1A24', border: '1px solid #2A2A3A', borderRadius: 12, fontSize: 12 }}
               labelStyle={{ color: '#8888AA' }}
               itemStyle={{ color: '#F0F0F8' }}
+              formatter={(value, name) => [value, name]}
             />
-            <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
-            {playerData.map((p, i) => (
-              <Line
-                key={p.user_id}
-                type="monotone"
-                dataKey={p.team_name}
-                stroke={p.user_id === currentUserId ? '#EF4323' : CHART_COLORS[i % CHART_COLORS.length]}
-                strokeWidth={p.user_id === currentUserId ? 3 : 1.5}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
+            {/* Render rivals first (behind), then current user on top */}
+            {sorted.filter(p => p.user_id !== currentUserId).map(p => (
+              <Line key={p.user_id} type="monotone" dataKey={p.team_name}
+                stroke="#8888AA" strokeWidth={1} strokeOpacity={0.45} dot={false} activeDot={{ r: 3 }} />
+            ))}
+            {sorted.filter(p => p.user_id === currentUserId).map(p => (
+              <Line key={p.user_id} type="monotone" dataKey={p.team_name}
+                stroke="#EF4323" strokeWidth={3} dot={false} activeDot={{ r: 5 }} />
             ))}
           </LineChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Custom ranked legend */}
+      <div className="mt-4 space-y-1.5">
+        {sorted.map((p, i) => {
+          const isMe = p.user_id === currentUserId
+          const rank = playerData.slice().sort((a, b) => b.total_points - a.total_points).findIndex(x => x.user_id === p.user_id) + 1
+          return (
+            <div key={p.user_id} className="flex items-center gap-2.5">
+              <div className="w-5 h-0.5 flex-shrink-0 rounded-full"
+                style={{ background: isMe ? '#EF4323' : '#8888AA', opacity: isMe ? 1 : 0.5 }} />
+              <span className="text-xs flex-1 truncate"
+                style={{ color: isMe ? '#EF4323' : 'var(--color-text-dim)', fontWeight: isMe ? 700 : 400 }}>
+                {isMe ? `${p.team_name} (you)` : p.team_name}
+              </span>
+              <span className="text-xs font-mono flex-shrink-0"
+                style={{ color: isMe ? 'var(--color-text)' : 'var(--color-text-dim)' }}>
+                #{rank} · {p.total_points}pts
+              </span>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

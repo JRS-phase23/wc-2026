@@ -721,24 +721,16 @@ function MatchPickCard({ match, draft, error, locked, onDraft, onAdvancing, onSa
             </div>
           ) : (
             <>
-              <input
-                type="number" min={0} max={99}
+              <ScoreInput
                 value={pickHome}
-                onChange={e => onDraft('home', e.target.value)}
-                onBlur={onSave}
-                placeholder="0"
-                className="w-11 text-center text-lg font-bold rounded-xl py-2 outline-none"
-                style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                onChange={v => onDraft('home', v)}
+                onSave={onSave}
               />
               <span className="text-sm font-bold" style={{ color: 'var(--color-text-dim)' }}>–</span>
-              <input
-                type="number" min={0} max={99}
+              <ScoreInput
                 value={pickAway}
-                onChange={e => onDraft('away', e.target.value)}
-                onBlur={onSave}
-                placeholder="0"
-                className="w-11 text-center text-lg font-bold rounded-xl py-2 outline-none"
-                style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                onChange={v => onDraft('away', v)}
+                onSave={onSave}
               />
             </>
           )}
@@ -785,6 +777,45 @@ function MatchPickCard({ match, draft, error, locked, onDraft, onAdvancing, onSa
       {needsAdvancing && (
         <p className="text-xs mt-1.5" style={{ color: 'var(--color-gold)' }}>Pick advancing team ↑</p>
       )}
+    </div>
+  )
+}
+
+// ── Score input with +/− buttons ─────────────────────────────────────────────
+function ScoreInput({ value, onChange, onSave }: {
+  value: string
+  onChange: (v: string) => void
+  onSave: () => void
+}) {
+  const num = Math.max(0, Math.min(99, parseInt(value || '0') || 0))
+
+  function adjust(delta: number) {
+    const next = Math.max(0, Math.min(99, num + delta))
+    onChange(String(next))
+    // Save after React flushes the state update
+    setTimeout(onSave, 30)
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onPointerDown={e => { e.preventDefault(); adjust(-1) }}
+        className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold select-none transition-opacity active:opacity-60"
+        style={{ background: 'var(--color-surface-3)', color: 'var(--color-text-dim)' }}
+      >−</button>
+      <input
+        type="number" min={0} max={99}
+        value={value}
+        onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 2))}
+        onBlur={onSave}
+        className="w-10 text-center text-lg font-bold rounded-lg py-1 outline-none"
+        style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+      />
+      <button
+        onPointerDown={e => { e.preventDefault(); adjust(1) }}
+        className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold select-none transition-opacity active:opacity-60"
+        style={{ background: 'var(--color-surface-3)', color: 'var(--color-text-dim)' }}
+      >+</button>
     </div>
   )
 }
