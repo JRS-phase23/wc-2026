@@ -57,8 +57,9 @@ body {
   position: fixed;
   inset: 0;
   background: url('/images/vintage-wc-action.jpg') center 35% / cover no-repeat;
-  opacity: 0.055;
+  opacity: 0.18;
   filter: grayscale(1);
+  mix-blend-mode: screen;
   pointer-events: none;
   z-index: 0;
 }
@@ -69,8 +70,9 @@ body {
   position: fixed;
   inset: 0;
   background: url('/images/vintage-wc-celebration.jpg') center 40% / cover no-repeat;
-  opacity: 0.05;
+  opacity: 0.18;
   filter: grayscale(1);
+  mix-blend-mode: screen;
   pointer-events: none;
   z-index: 0;
 }
