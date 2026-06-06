@@ -33,13 +33,13 @@ export default function LandingPage() {
         <div className="flex items-center gap-3">
           <Image src="/phase23-logo.svg" alt="Phase23" width={88} height={10} style={{ height: 'auto' }} priority />
         </div>
-        <div className="flex items-center gap-5">
-          <Link href="/login" className="text-sm" style={{ color: 'var(--color-text-dim)' }}>
-            Sign in →
+        <div className="flex items-center gap-4">
+          <Link href="/login" className="text-sm hidden sm:block" style={{ color: 'var(--color-text-dim)' }}>
+            Sign in
           </Link>
           <Link
             href="/signup"
-            className="flex items-center justify-between gap-6 px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
             style={{ background: '#fff', color: '#000', borderRadius: 3 }}
           >
             <span>Join free</span>
