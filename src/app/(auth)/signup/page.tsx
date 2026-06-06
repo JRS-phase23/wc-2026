@@ -37,7 +37,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="page-bloom min-h-dvh flex flex-col items-center justify-center px-6 py-16" style={{ background: 'var(--color-bg)' }}>
+    <div className="page-bloom-alt min-h-dvh flex flex-col items-center justify-center px-6 py-16" style={{ background: 'var(--color-bg)' }}>
       <div className="w-full max-w-sm animate-slide-up">
 
         {/* Logo */}
@@ -49,8 +49,8 @@ export default function SignupPage() {
 
         {/* Polestar-style heading */}
         <div className="mb-10">
-          <h1 className="text-5xl font-bold leading-none mb-1" style={{ color: 'var(--color-text)' }}>Create</h1>
-          <h1 className="text-5xl font-bold leading-none" style={{ color: 'var(--color-gold)' }}>Your team</h1>
+          <h1 className="text-5xl font-light leading-none mb-1" style={{ color: 'var(--color-text)' }}>Create</h1>
+          <h1 className="text-5xl font-light leading-none" style={{ color: 'var(--color-gold)' }}>Your team</h1>
           <p className="text-sm mt-5 leading-relaxed" style={{ color: 'var(--color-text-dim)' }}>
             Free to join · No credit card required.
           </p>

@@ -49,27 +49,27 @@ export default function LandingPage() {
       </header>
 
       {/* Hero */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
+      <main className="flex-1 flex flex-col px-6 py-12">
         <div className="animate-slide-up max-w-lg w-full">
 
-          {/* Polestar-style stacked heading */}
+          {/* Polestar-style stacked heading — left justified, light weight */}
           <div className="mb-10">
-            <p className="text-xs font-semibold uppercase tracking-widest mb-6" style={{ color: 'var(--color-text-dim)' }}>
+            <p className="text-xs font-medium uppercase tracking-widest mb-8" style={{ color: 'var(--color-text-dim)' }}>
               FIFA World Cup 2026 · Canada / Mexico / USA
             </p>
-            <h1 className="text-6xl sm:text-7xl font-bold leading-none tracking-tight mb-1" style={{ color: 'var(--color-text)' }}>
+            <h1 className="text-6xl sm:text-7xl font-light leading-none tracking-tight mb-1" style={{ color: 'var(--color-text)' }}>
               Predict.
             </h1>
-            <h1 className="text-6xl sm:text-7xl font-bold leading-none tracking-tight" style={{ color: 'var(--color-gold)' }}>
+            <h1 className="text-6xl sm:text-7xl font-light leading-none tracking-tight" style={{ color: 'var(--color-gold)' }}>
               Dominate.
             </h1>
-            <p className="text-base mt-6 leading-relaxed max-w-sm mx-auto" style={{ color: 'var(--color-text-dim)' }}>
+            <p className="text-base mt-8 leading-relaxed max-w-sm" style={{ color: 'var(--color-text-dim)' }}>
               The smartest World Cup pick&apos;em. Predict every match, earn points at every stage, and climb the leaderboard.
             </p>
           </div>
 
           {/* Polestar-style CTAs */}
-          <div className="flex flex-col gap-3 max-w-xs mx-auto">
+          <div className="flex flex-col gap-3 max-w-xs">
             <Link
               href="/signup"
               className="flex items-center justify-between px-6 py-4 font-semibold text-sm transition-opacity hover:opacity-90 active:opacity-80"
@@ -92,7 +92,7 @@ export default function LandingPage() {
         <div className="w-full max-w-lg mt-20 mb-10" style={{ height: 1, background: 'var(--color-border)' }} />
 
         {/* Feature grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl w-full stagger">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg w-full stagger">
           {features.map(({ icon: Icon, title, desc }) => (
             <div
               key={title}
@@ -110,7 +110,7 @@ export default function LandingPage() {
         </div>
 
         {/* Scoring legend */}
-        <div className="mt-8 p-5 rounded-2xl max-w-md w-full text-left"
+        <div className="mt-8 p-5 rounded-2xl max-w-lg w-full text-left"
           style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
           <p className="text-xs font-semibold mb-3 uppercase tracking-wider" style={{ color: 'var(--color-text-dim)' }}>How scoring works</p>
           <div className="space-y-2">

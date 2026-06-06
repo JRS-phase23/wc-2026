@@ -36,24 +36,61 @@ body {
 ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #555555; }
 
-/* Warm atmospheric bloom — fixed radial glow from top center */
-.page-bloom {
+/* ── Background layer system ────────────────────────────────────────────────
+   Two variants:
+     .page-bloom     → Garrincha 1962 World Cup (action / crowd)
+     .page-bloom-alt → Pelé 1970 World Cup Final (celebration)
+
+   Layer order:
+     ::before  z-0  vintage photo at ~5% opacity, grayscale
+     ::after   z-1  warm orange bloom gradient
+     > *       z-2  actual page content
+   ───────────────────────────────────────────────────────────────────────── */
+.page-bloom,
+.page-bloom-alt {
   position: relative;
 }
+
+/* Vintage photo — action */
 .page-bloom::before {
   content: '';
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 55vh;
-  background: radial-gradient(ellipse 100% 60% at 50% -10%, rgba(239,67,35,0.13) 0%, transparent 70%);
+  inset: 0;
+  background: url('/images/vintage-wc-action.jpg') center 35% / cover no-repeat;
+  opacity: 0.055;
+  filter: grayscale(1);
   pointer-events: none;
   z-index: 0;
 }
-.page-bloom > * {
-  position: relative;
+
+/* Vintage photo — celebration */
+.page-bloom-alt::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url('/images/vintage-wc-celebration.jpg') center 40% / cover no-repeat;
+  opacity: 0.05;
+  filter: grayscale(1);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Warm bloom gradient — identical for both variants */
+.page-bloom::after,
+.page-bloom-alt::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 110% 55% at 50% -5%, rgba(239,67,35,0.14) 0%, transparent 65%);
+  pointer-events: none;
   z-index: 1;
+}
+
+/* All direct children of a bloom container sit above the backgrounds */
+.page-bloom > *,
+.page-bloom-alt > * {
+  position: relative;
+  z-index: 2;
 }
 
 /* Score input spinners */
