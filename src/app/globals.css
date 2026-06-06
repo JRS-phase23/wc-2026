@@ -5,13 +5,13 @@
   --color-gold-dim: #C7351B;
   --color-green-score: #00875A;
   --color-red-score: #F87171;
-  --color-bg: #0A0A0F;
-  --color-surface: #111118;
-  --color-surface-2: #1A1A24;
-  --color-surface-3: #222230;
-  --color-border: #2A2A3A;
+  --color-bg: #080808;
+  --color-surface: #111111;
+  --color-surface-2: #181818;
+  --color-surface-3: #202020;
+  --color-border: rgba(255,255,255,0.07);
   --color-text: #F0F0F8;
-  --color-text-dim: #8888AA;
+  --color-text-dim: #888888;
 }
 
 * {
@@ -19,7 +19,7 @@
 }
 
 html {
-  background: #0A0A0F;
+  background: #080808;
   color: #F0F0F8;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -27,14 +27,34 @@ html {
 
 body {
   min-height: 100dvh;
-  background: #0A0A0F;
+  background: #080808;
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #111118; }
-::-webkit-scrollbar-thumb { background: #2A2A3A; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #8888AA; }
+::-webkit-scrollbar-track { background: #111111; }
+::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #555555; }
+
+/* Warm atmospheric bloom — fixed radial glow from top center */
+.page-bloom {
+  position: relative;
+}
+.page-bloom::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 55vh;
+  background: radial-gradient(ellipse 100% 60% at 50% -10%, rgba(239,67,35,0.13) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+.page-bloom > * {
+  position: relative;
+  z-index: 1;
+}
 
 /* Score input spinners */
 input[type="number"]::-webkit-inner-spin-button,

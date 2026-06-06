@@ -130,7 +130,7 @@ export default async function CompetitionPage({ params }: { params: Promise<{ id
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6">
+    <div className="page-bloom max-w-lg mx-auto px-4 py-6">
       {/* Header */}
       <div className="mb-6 animate-fade-in">
         <div className="flex items-start justify-between">
@@ -149,8 +149,8 @@ export default async function CompetitionPage({ params }: { params: Promise<{ id
           </div>
           {myEntry && (
             <div className="text-right">
-              <div className="text-2xl font-bold" style={{ color: 'var(--color-gold)' }}>{myEntry.total_points}</div>
-              <div className="text-xs" style={{ color: 'var(--color-text-dim)' }}>
+              <div className="text-3xl font-bold" style={{ color: 'var(--color-gold)' }}>{myEntry.total_points}</div>
+              <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-dim)' }}>
                 Rank #{myEntry.rank} of {leaderboard.length}
               </div>
             </div>
