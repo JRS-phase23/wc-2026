@@ -784,29 +784,46 @@ function ScoreInput({ value, onChange, onSave }: {
   function adjust(delta: number) {
     const next = Math.max(0, Math.min(99, num + delta))
     onChange(String(next))
-    // Save after React flushes the state update
     setTimeout(onSave, 30)
   }
 
+  // Shared button style — touch-action:manipulation removes the 300ms tap
+  // delay on iOS and prevents double-tap zoom without blocking scroll.
+  // onPointerDown + e.preventDefault() stops the browser from scrolling
+  // the element into view (the root cause of the screen-jump bug).
+  const btnStyle: React.CSSProperties = {
+    background: 'var(--color-surface-3)',
+    color: 'var(--color-text-dim)',
+    touchAction: 'manipulation',
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+  }
+
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1" style={{ touchAction: 'manipulation' }}>
       <button
-        onPointerDown={e => { e.preventDefault(); adjust(-1) }}
-        className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold select-none transition-opacity active:opacity-60"
-        style={{ background: 'var(--color-surface-3)', color: 'var(--color-text-dim)' }}
+        onPointerDown={e => { e.preventDefault(); e.stopPropagation(); adjust(-1) }}
+        className="w-9 h-9 rounded-full flex items-center justify-center text-xl font-bold active:opacity-50"
+        style={btnStyle}
+        aria-label="decrease"
       >−</button>
-      <input
-        type="number" min={0} max={99}
-        value={value}
-        onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 2))}
-        onBlur={onSave}
-        className="w-10 text-center text-lg font-bold rounded-lg py-1 outline-none"
-        style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
-      />
+
+      {/* Plain display — no input field, no spinners, no focus events */}
+      <span
+        className="text-xl font-bold text-center"
+        style={{
+          minWidth: '2rem',
+          color: 'var(--color-text)',
+          letterSpacing: '-0.02em',
+          display: 'inline-block',
+        }}
+      >{num}</span>
+
       <button
-        onPointerDown={e => { e.preventDefault(); adjust(1) }}
-        className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold select-none transition-opacity active:opacity-60"
-        style={{ background: 'var(--color-surface-3)', color: 'var(--color-text-dim)' }}
+        onPointerDown={e => { e.preventDefault(); e.stopPropagation(); adjust(1) }}
+        className="w-9 h-9 rounded-full flex items-center justify-center text-xl font-bold active:opacity-50"
+        style={btnStyle}
+        aria-label="increase"
       >+</button>
     </div>
   )
