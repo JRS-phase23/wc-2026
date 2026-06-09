@@ -24,7 +24,7 @@ export default function JoinCodeInput() {
           value={code}
           onChange={e => setCode(e.target.value.toUpperCase())}
           maxLength={6}
-          placeholder="e.g. ABC123"
+          placeholder="ABC123"
           className="w-full px-4 py-3 text-sm font-mono uppercase outline-none"
           style={{
             background: 'var(--color-surface)',

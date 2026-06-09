@@ -30,34 +30,24 @@ export default function LandingPage() {
   return (
     <div className="page-bloom min-h-dvh flex flex-col" style={{ background: 'var(--color-bg)' }}>
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-3">
-          <Image src="/phase23-logo.svg" alt="Phase23" width={88} height={10} style={{ height: 'auto' }} priority />
-        </div>
-        <div className="flex items-center gap-4">
-          <Link href="/login" className="text-sm hidden sm:block" style={{ color: 'var(--color-text-dim)' }}>
+      <header className="px-6 pt-6 pb-4">
+        <div className="flex items-center justify-between mb-3">
+          <Image src="/phase23-logo.svg" alt="Phase23" width={148} height={10} style={{ height: 'auto' }} priority />
+          <Link href="/login" className="text-sm" style={{ color: 'var(--color-text-dim)' }}>
             Sign in
           </Link>
-          <Link
-            href="/signup"
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
-            style={{ background: '#fff', color: '#000', borderRadius: 3 }}
-          >
-            <span>Join free</span>
-            <span style={{ color: 'var(--color-gold)' }}>→</span>
-          </Link>
         </div>
+        <p className="text-xs font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-dim)' }}>
+          FIFA World Cup 2026 · Canada / Mexico / USA
+        </p>
       </header>
 
       {/* Hero */}
-      <main className="flex-1 flex flex-col px-6 py-12">
+      <main className="flex-1 flex flex-col px-6 pt-24 pb-12">
         <div className="animate-slide-up max-w-lg w-full">
 
           {/* Polestar-style stacked heading — left justified, light weight */}
           <div className="mb-10">
-            <p className="text-xs font-medium uppercase tracking-widest mb-8" style={{ color: 'var(--color-text-dim)' }}>
-              FIFA World Cup 2026 · Canada / Mexico / USA
-            </p>
             <h1 className="text-6xl sm:text-7xl font-light leading-none tracking-tight mb-1" style={{ color: 'var(--color-text)' }}>
               Predict.
             </h1>
@@ -65,7 +55,7 @@ export default function LandingPage() {
               Dominate.
             </h1>
             <p className="text-base mt-8 leading-relaxed max-w-sm" style={{ color: 'var(--color-text-dim)' }}>
-              The smartest World Cup pick&apos;em. Predict every match, earn points at every stage, and climb the leaderboard.
+              Predict every match, earn points at every stage, and climb the leaderboard.
             </p>
           </div>
 
