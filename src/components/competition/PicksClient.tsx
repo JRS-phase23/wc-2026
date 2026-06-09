@@ -681,21 +681,26 @@ function MatchPickCard({ match, draft, error, locked, onDraft, onAdvancing, onSa
         )}
       </div>
 
-      {/* Teams + score */}
-      <div className="flex items-center gap-3">
-        {/* Home */}
-        <div className="flex-1 flex items-center gap-2 min-w-0">
-          {homeTeam?.flag_code && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={getFlagUrl(homeTeam.flag_code)} alt="" className="w-6 h-4 object-cover rounded-sm flex-shrink-0" />
-          )}
-          <span className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>
-            {homeTeam?.name ?? match.home_label}
-          </span>
-        </div>
+      {/* Team name titles */}
+      <div className="flex justify-between mb-3">
+        <span className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+          {homeTeam?.name ?? match.home_label}
+        </span>
+        <span className="text-sm font-semibold text-right" style={{ color: 'var(--color-text)' }}>
+          {awayTeam?.name ?? match.away_label}
+        </span>
+      </div>
+
+      {/* Flags + score row */}
+      <div className="flex items-center justify-between gap-2">
+        {/* Home flag */}
+        {homeTeam?.flag_code && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={getFlagUrl(homeTeam.flag_code)} alt="" className="w-6 h-4 object-cover rounded-sm flex-shrink-0" />
+        )}
 
         {/* Score area */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-1 justify-center">
           {isCompleted ? (
             <div className="flex items-center gap-1.5">
               {hasPick && (
@@ -721,31 +726,18 @@ function MatchPickCard({ match, draft, error, locked, onDraft, onAdvancing, onSa
             </div>
           ) : (
             <>
-              <ScoreInput
-                value={pickHome}
-                onChange={v => onDraft('home', v)}
-                onSave={onSave}
-              />
+              <ScoreInput value={pickHome} onChange={v => onDraft('home', v)} onSave={onSave} />
               <span className="text-sm font-bold" style={{ color: 'var(--color-text-dim)' }}>–</span>
-              <ScoreInput
-                value={pickAway}
-                onChange={v => onDraft('away', v)}
-                onSave={onSave}
-              />
+              <ScoreInput value={pickAway} onChange={v => onDraft('away', v)} onSave={onSave} />
             </>
           )}
         </div>
 
-        {/* Away */}
-        <div className="flex-1 flex items-center gap-2 justify-end min-w-0">
-          <span className="text-sm font-semibold truncate text-right" style={{ color: 'var(--color-text)' }}>
-            {awayTeam?.name ?? match.away_label}
-          </span>
-          {awayTeam?.flag_code && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={getFlagUrl(awayTeam.flag_code)} alt="" className="w-6 h-4 object-cover rounded-sm flex-shrink-0" />
-          )}
-        </div>
+        {/* Away flag */}
+        {awayTeam?.flag_code && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={getFlagUrl(awayTeam.flag_code)} alt="" className="w-6 h-4 object-cover rounded-sm flex-shrink-0" />
+        )}
       </div>
 
       {/* Knockout advancing selector */}

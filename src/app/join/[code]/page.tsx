@@ -57,7 +57,7 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
     <div className="min-h-dvh flex flex-col items-center justify-center px-5 py-12 text-center"
       style={{ background: 'var(--color-bg)' }}>
       <Link href="/" className="flex flex-col items-center gap-2 mb-10">
-        <Image src="/phase23-logo.svg" alt="Phase23" width={110} height={12} style={{ height: 'auto' }} priority />
+        <Image src="/phase23-logo.svg" alt="Phase23" width={148} height={12} style={{ height: 'auto' }} priority />
         <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>World Cup Pick&apos;em</span>
       </Link>
 

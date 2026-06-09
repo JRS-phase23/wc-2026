@@ -44,7 +44,7 @@ export default function SignupPage() {
         {/* Logo */}
         <div className="mb-10">
           <Link href="/">
-            <Image src="/phase23-logo.svg" alt="Phase23" width={100} height={11} style={{ height: 'auto' }} priority />
+            <Image src="/phase23-logo.svg" alt="Phase23" width={148} height={11} style={{ height: 'auto' }} priority />
           </Link>
         </div>
 

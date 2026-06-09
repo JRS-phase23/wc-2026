@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { STAGE_LABELS, STAGE_ORDER } from '@/lib/scoring'
 import { formatKickoff, getFlagUrl } from '@/lib/utils'
 import type { Match, CompetitionMember, Stage } from '@/types'
-import { Check, Trash2, Users, ClipboardList, ChevronDown, ChevronUp } from 'lucide-react'
+import { Check, Trash2, Users, ClipboardList, Pencil, AlertTriangle } from 'lucide-react'
 import CopyCodeButton from './CopyCodeButton'
 
 interface Props {
@@ -19,15 +19,71 @@ interface Props {
 }
 
 export default function AdminClient({ competitionId, competitionName, joinCode, adminId, matches, members }: Props) {
+  const router = useRouter()
   const [tab, setTab] = useState<'results' | 'members'>('results')
+  const [name, setName] = useState(competitionName)
+  const [editingName, setEditingName] = useState(false)
+  const [savingName, setSavingName] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function saveName() {
+    if (!name.trim() || name.trim() === competitionName) { setEditingName(false); return }
+    setSavingName(true)
+    const supabase = createClient()
+    await supabase.from('competitions').update({ name: name.trim() }).eq('id', competitionId)
+    setSavingName(false)
+    setEditingName(false)
+    router.refresh()
+  }
+
+  async function deleteGame() {
+    setDeleting(true)
+    const supabase = createClient()
+    await supabase.from('picks').delete().eq('competition_id', competitionId)
+    await supabase.from('competition_members').delete().eq('competition_id', competitionId)
+    await supabase.from('competitions').delete().eq('id', competitionId)
+    router.push('/dashboard')
+    router.refresh()
+  }
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6">
       <div className="mb-5 animate-fade-in">
         <h1 className="text-xl font-bold" style={{ color: 'var(--color-text)' }}>Admin Panel</h1>
-        <p className="text-sm mt-0.5 flex items-center gap-2" style={{ color: 'var(--color-text-dim)' }}>
-          {competitionName} · <CopyCodeButton code={joinCode} />
-        </p>
+
+        {/* Editable game name */}
+        <div className="flex items-center gap-2 mt-1">
+          {editingName ? (
+            <div className="flex items-center gap-2 flex-1">
+              <input
+                autoFocus
+                value={name}
+                onChange={e => setName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') { setName(competitionName); setEditingName(false) } }}
+                maxLength={50}
+                className="flex-1 text-sm px-2 py-1 rounded-lg outline-none"
+                style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+              />
+              <button onClick={saveName} disabled={savingName} className="text-xs px-3 py-1.5 rounded-lg font-semibold"
+                style={{ background: 'var(--color-gold)', color: '#fff' }}>
+                {savingName ? '…' : 'Save'}
+              </button>
+              <button onClick={() => { setName(competitionName); setEditingName(false) }} className="text-xs px-3 py-1.5 rounded-lg"
+                style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-dim)' }}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm flex items-center gap-2" style={{ color: 'var(--color-text-dim)' }}>
+              {name}
+              <button onClick={() => setEditingName(true)} className="hover:opacity-70 transition-opacity">
+                <Pencil size={12} style={{ color: 'var(--color-text-dim)' }} />
+              </button>
+              · <CopyCodeButton code={joinCode} />
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -50,6 +106,44 @@ export default function AdminClient({ competitionId, competitionName, joinCode, 
 
       {tab === 'results' && <ResultsTab matches={matches} />}
       {tab === 'members' && <MembersTab competitionId={competitionId} adminId={adminId} members={members} />}
+
+      {/* Delete game */}
+      <div className="mt-10 pt-6" style={{ borderTop: '1px solid var(--color-border)' }}>
+        {!confirmDelete ? (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl transition-colors hover:bg-red-500/10"
+            style={{ color: '#ef5350', border: '1px solid rgba(239,83,80,0.2)' }}
+          >
+            <Trash2 size={14} />
+            Delete game
+          </button>
+        ) : (
+          <div className="p-4 rounded-2xl" style={{ background: 'rgba(239,83,80,0.08)', border: '1px solid rgba(239,83,80,0.25)' }}>
+            <div className="flex items-start gap-3 mb-4">
+              <AlertTriangle size={16} style={{ color: '#ef5350', flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Delete "{name}"?</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--color-text-dim)' }}>
+                  This permanently removes the game, all picks, and all members. This cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmDelete(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm"
+                style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-dim)' }}>
+                Cancel
+              </button>
+              <button onClick={deleteGame} disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50"
+                style={{ background: '#ef5350', color: '#fff' }}>
+                {deleting ? 'Deleting…' : 'Yes, delete'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
