@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Trophy, Users, BarChart3, Zap } from 'lucide-react'
+import JoinCodeInput from '@/components/JoinCodeInput'
 
 const features = [
   {
@@ -68,14 +69,23 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Polestar-style CTAs */}
+          {/* CTAs — join first, create second */}
           <div className="flex flex-col gap-3 max-w-xs">
+            <JoinCodeInput />
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 py-1">
+              <div className="flex-1" style={{ height: 1, background: 'var(--color-border)' }} />
+              <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>or</span>
+              <div className="flex-1" style={{ height: 1, background: 'var(--color-border)' }} />
+            </div>
+
             <Link
               href="/signup"
               className="flex items-center justify-between px-6 py-4 font-semibold text-sm transition-opacity hover:opacity-90 active:opacity-80"
               style={{ background: '#fff', color: '#000', borderRadius: 3 }}
             >
-              <span>Create your team</span>
+              <span>Start a new game</span>
               <span style={{ color: 'var(--color-gold)' }}>→</span>
             </Link>
             <Link

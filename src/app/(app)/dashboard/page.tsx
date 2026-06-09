@@ -6,6 +6,7 @@ import { formatKickoff, getFlagUrl } from '@/lib/utils'
 import { Plus, Users, Trophy, Clock } from 'lucide-react'
 import CreateCompetitionButton from '@/components/competition/CreateCompetitionButton'
 import JoinCompetitionButton from '@/components/competition/JoinCompetitionButton'
+import JoinCodeInput from '@/components/JoinCodeInput'
 import type { Match, Pick } from '@/types'
 
 export default async function DashboardPage() {
@@ -160,10 +161,24 @@ export default async function DashboardPage() {
 
       {/* Competition list */}
       {allComps.length === 0 ? (
-        <div className="text-center py-16 stagger">
-          <div className="text-4xl mb-4">🏆</div>
-          <p className="font-semibold mb-1" style={{ color: 'var(--color-text)' }}>No competitions yet</p>
-          <p className="text-sm" style={{ color: 'var(--color-text-dim)' }}>Create one or join with a code</p>
+        <div className="py-8 stagger space-y-8">
+          {/* Join path */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'var(--color-text-dim)' }}>
+              Have an invite code?
+            </p>
+            <JoinCodeInput />
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1" style={{ height: 1, background: 'var(--color-border)' }} />
+            <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>or start your own</span>
+            <div className="flex-1" style={{ height: 1, background: 'var(--color-border)' }} />
+          </div>
+
+          {/* Create path — reuse existing button */}
+          <CreateCompetitionButton userId={user.id} />
         </div>
       ) : (
         <div className="space-y-3 stagger">

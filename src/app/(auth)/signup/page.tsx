@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 export default function SignupPage() {
   const router = useRouter()
   const [next] = useState(() => typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') ?? '/dashboard' : '/dashboard')
+  const isJoining = next.startsWith('/join/')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [teamName, setTeamName] = useState('')
@@ -54,6 +55,12 @@ export default function SignupPage() {
           <p className="text-sm mt-5 leading-relaxed" style={{ color: 'var(--color-text-dim)' }}>
             Free to join · No credit card required.
           </p>
+          {isJoining && (
+            <div className="mt-4 px-4 py-3 rounded-xl text-sm flex items-center gap-2"
+              style={{ background: 'rgba(239,67,35,0.1)', border: '1px solid rgba(239,67,35,0.2)', color: 'var(--color-gold)' }}>
+              🏆 You&apos;ll be joined to the game automatically after sign up.
+            </div>
+          )}
         </div>
 
         {/* Thin divider */}
@@ -132,7 +139,7 @@ export default function SignupPage() {
 
             {/* Ghost CTA */}
             <Link
-              href="/login"
+              href={next !== '/dashboard' ? `/login?next=${encodeURIComponent(next)}` : '/login'}
               className="mt-3 w-full flex items-center justify-between px-5 py-3.5 text-sm transition-opacity hover:opacity-70"
               style={{ color: 'var(--color-text-dim)' }}
             >

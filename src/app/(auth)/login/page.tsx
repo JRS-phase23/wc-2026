@@ -112,7 +112,7 @@ export default function LoginPage() {
 
             {/* Ghost CTA */}
             <Link
-              href="/signup"
+              href={next !== '/dashboard' ? `/signup?next=${encodeURIComponent(next)}` : '/signup'}
               className="mt-3 w-full flex items-center justify-between px-5 py-3.5 text-sm transition-opacity hover:opacity-70"
               style={{ color: 'var(--color-text-dim)' }}
             >
