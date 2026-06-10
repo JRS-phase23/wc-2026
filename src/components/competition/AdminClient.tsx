@@ -192,36 +192,43 @@ function ResultsTab({ matches }: { matches: Match[] }) {
 }
 
 function ResultEntryCard({ match }: { match: Match }) {
-  const [homeScore, setHomeScore] = useState(match.home_score != null ? String(match.home_score) : '')
-  const [awayScore, setAwayScore] = useState(match.away_score != null ? String(match.away_score) : '')
+  const alreadySaved = match.status === 'completed'
+  const [homeScore, setHomeScore] = useState(match.home_score ?? 0)
+  const [awayScore, setAwayScore] = useState(match.away_score ?? 0)
   const [extraTime, setExtraTime] = useState(match.extra_time)
   const [penalties, setPenalties] = useState(match.penalties)
-  const [penHome, setPenHome] = useState(match.penalty_home != null ? String(match.penalty_home) : '')
-  const [penAway, setPenAway] = useState(match.penalty_away != null ? String(match.penalty_away) : '')
+  const [penHome, setPenHome] = useState(match.penalty_home ?? 0)
+  const [penAway, setPenAway] = useState(match.penalty_away ?? 0)
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(match.status === 'completed')
+  const [saved, setSaved] = useState(alreadySaved)
+  // Track whether admin has touched the steppers — prevents accidental 0-0 saves
+  const [touched, setTouched] = useState(alreadySaved)
   const [error, setError] = useState('')
   const router = useRouter()
 
   const homeTeam = match.home_team
   const awayTeam = match.away_team
 
+  function touch<T>(setter: (v: T) => void): (v: T) => void {
+    return (v: T) => { setter(v); setTouched(true); setSaved(false) }
+  }
+
   async function save() {
-    if (homeScore === '' || awayScore === '') return
+    if (!touched) return
     setSaving(true)
     setError('')
     const supabase = createClient()
 
     const update: Record<string, unknown> = {
-      home_score: parseInt(homeScore),
-      away_score: parseInt(awayScore),
+      home_score: homeScore,
+      away_score: awayScore,
       extra_time: extraTime,
       penalties,
       status: 'completed',
     }
     if (penalties) {
-      update.penalty_home = penHome ? parseInt(penHome) : null
-      update.penalty_away = penAway ? parseInt(penAway) : null
+      update.penalty_home = penHome
+      update.penalty_away = penAway
     }
 
     const { error: err } = await supabase.from('matches').update(update).eq('id', match.id)
@@ -234,8 +241,8 @@ function ResultEntryCard({ match }: { match: Match }) {
   async function clearResult() {
     const supabase = createClient()
     await supabase.from('matches').update({ home_score: null, away_score: null, status: 'scheduled', extra_time: false, penalties: false, penalty_home: null, penalty_away: null }).eq('id', match.id)
-    setHomeScore(''); setAwayScore(''); setExtraTime(false); setPenalties(false); setPenHome(''); setPenAway('')
-    setSaved(false)
+    setHomeScore(0); setAwayScore(0); setExtraTime(false); setPenalties(false); setPenHome(0); setPenAway(0)
+    setTouched(false); setSaved(false)
     router.refresh()
   }
 
@@ -254,20 +261,10 @@ function ResultEntryCard({ match }: { match: Match }) {
           <span className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>{homeTeam?.name ?? match.home_label}</span>
         </div>
 
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          <input
-            type="number" min={0} max={99} value={homeScore} onChange={e => { setHomeScore(e.target.value); setSaved(false) }}
-            placeholder="0"
-            className="w-11 text-center text-base font-bold rounded-xl py-2 outline-none"
-            style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
-          />
-          <span style={{ color: 'var(--color-text-dim)' }}>–</span>
-          <input
-            type="number" min={0} max={99} value={awayScore} onChange={e => { setAwayScore(e.target.value); setSaved(false) }}
-            placeholder="0"
-            className="w-11 text-center text-base font-bold rounded-xl py-2 outline-none"
-            style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
-          />
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <ScoreStep value={homeScore} onChange={touch(setHomeScore)} />
+          <span className="text-sm px-0.5" style={{ color: 'var(--color-text-dim)' }}>–</span>
+          <ScoreStep value={awayScore} onChange={touch(setAwayScore)} />
         </div>
 
         <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
@@ -280,23 +277,19 @@ function ResultEntryCard({ match }: { match: Match }) {
       {match.stage !== 'group' && (
         <div className="mt-3 pt-3 flex items-center gap-4" style={{ borderTop: '1px solid var(--color-border)' }}>
           <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: 'var(--color-text-dim)' }}>
-            <input type="checkbox" checked={extraTime} onChange={e => setExtraTime(e.target.checked)} className="rounded" />
+            <input type="checkbox" checked={extraTime} onChange={e => { setExtraTime(e.target.checked); setTouched(true) }} className="rounded" />
             Extra time
           </label>
           <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: 'var(--color-text-dim)' }}>
-            <input type="checkbox" checked={penalties} onChange={e => setPenalties(e.target.checked)} className="rounded" />
+            <input type="checkbox" checked={penalties} onChange={e => { setPenalties(e.target.checked); setTouched(true) }} className="rounded" />
             Penalties
           </label>
           {penalties && (
             <div className="flex items-center gap-1 ml-auto">
               <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Pen:</span>
-              <input type="number" min={0} max={20} value={penHome} onChange={e => setPenHome(e.target.value)}
-                placeholder="0" className="w-9 text-center text-sm rounded-lg py-1 outline-none"
-                style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }} />
-              <span style={{ color: 'var(--color-text-dim)' }}>–</span>
-              <input type="number" min={0} max={20} value={penAway} onChange={e => setPenAway(e.target.value)}
-                placeholder="0" className="w-9 text-center text-sm rounded-lg py-1 outline-none"
-                style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }} />
+              <ScoreStep value={penHome} onChange={touch(setPenHome)} size="small" />
+              <span className="text-xs px-0.5" style={{ color: 'var(--color-text-dim)' }}>–</span>
+              <ScoreStep value={penAway} onChange={touch(setPenAway)} size="small" />
             </div>
           )}
         </div>
@@ -313,7 +306,7 @@ function ResultEntryCard({ match }: { match: Match }) {
         )}
         <button
           onClick={save}
-          disabled={saving || homeScore === '' || awayScore === ''}
+          disabled={saving || !touched}
           className="ml-auto px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40 transition-all"
           style={{ background: 'var(--color-gold)', color: '#0A0A0F' }}
         >
@@ -328,10 +321,12 @@ function ResultEntryCard({ match }: { match: Match }) {
 function MembersTab({ competitionId, adminId, members }: { competitionId: string; adminId: string; members: CompetitionMember[] }) {
   const router = useRouter()
   const [removing, setRemoving] = useState<string | null>(null)
+  const [confirmUserId, setConfirmUserId] = useState<string | null>(null)
 
   async function removeMember(userId: string) {
     if (userId === adminId) return
     setRemoving(userId)
+    setConfirmUserId(null)
     const supabase = createClient()
     await supabase.from('competition_members')
       .delete()
@@ -349,28 +344,92 @@ function MembersTab({ competitionId, adminId, members }: { competitionId: string
       {members.map(m => {
         const profile = (Array.isArray(m.profiles) ? m.profiles[0] : m.profiles) as { team_name: string; email: string } | null
         const isAdmin = m.user_id === adminId
+        const isConfirming = confirmUserId === m.user_id
         return (
-          <div key={m.user_id} className="flex items-center justify-between px-4 py-3 rounded-2xl"
-            style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-            <div>
-              <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-                {profile?.team_name ?? 'Unknown'} {isAdmin && <span className="text-xs" style={{ color: 'var(--color-gold)' }}>· Admin</span>}
-              </p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-dim)' }}>{profile?.email}</p>
+          <div key={m.user_id} className="px-4 py-3 rounded-2xl"
+            style={{ background: 'var(--color-surface)', border: `1px solid ${isConfirming ? 'rgba(239,83,80,0.3)' : 'var(--color-border)'}` }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                  {profile?.team_name ?? 'Unknown'} {isAdmin && <span className="text-xs" style={{ color: 'var(--color-gold)' }}>· Admin</span>}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-dim)' }}>{profile?.email}</p>
+              </div>
+              {!isAdmin && !isConfirming && (
+                <button
+                  onClick={() => setConfirmUserId(m.user_id)}
+                  disabled={removing === m.user_id}
+                  className="p-2 rounded-lg transition-colors hover:bg-red-500/10 disabled:opacity-40"
+                  style={{ color: '#ef5350' }}
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
             </div>
-            {!isAdmin && (
-              <button
-                onClick={() => removeMember(m.user_id)}
-                disabled={removing === m.user_id}
-                className="p-2 rounded-lg transition-colors hover:bg-red-500/10 disabled:opacity-40"
-                style={{ color: '#ef5350' }}
-              >
-                <Trash2 size={15} />
-              </button>
+            {isConfirming && (
+              <div className="flex items-center justify-between mt-2 pt-2" style={{ borderTop: '1px solid rgba(239,83,80,0.2)' }}>
+                <span className="text-xs" style={{ color: '#ef5350' }}>Remove this player?</span>
+                <div className="flex gap-2">
+                  <button onClick={() => setConfirmUserId(null)}
+                    className="text-xs px-3 py-1.5 rounded-lg"
+                    style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-dim)' }}>
+                    Cancel
+                  </button>
+                  <button onClick={() => removeMember(m.user_id)} disabled={removing === m.user_id}
+                    className="text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-40"
+                    style={{ background: '#ef5350', color: '#fff' }}>
+                    {removing === m.user_id ? 'Removing…' : 'Remove'}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )
       })}
+    </div>
+  )
+}
+
+// ── Score stepper — no input field, no iOS scroll-jump ────────────────────
+function ScoreStep({ value, onChange, size = 'normal' }: {
+  value: number
+  onChange: (n: number) => void
+  size?: 'normal' | 'small'
+}) {
+  const isSmall = size === 'small'
+  const btnStyle: React.CSSProperties = {
+    background: 'var(--color-surface-3)',
+    color: 'var(--color-text-dim)',
+    touchAction: 'manipulation',
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+  }
+  return (
+    <div className="flex items-center gap-0.5" style={{ touchAction: 'manipulation' }}>
+      <button
+        type="button"
+        onPointerDown={e => { e.preventDefault(); e.stopPropagation(); onChange(Math.max(0, value - 1)) }}
+        className={`${isSmall ? 'w-7 h-7 text-base' : 'w-8 h-8 text-lg'} rounded-full flex items-center justify-center font-bold active:opacity-50`}
+        style={btnStyle}
+        aria-label="decrease"
+      >−</button>
+      <span
+        className="font-bold text-center"
+        style={{
+          minWidth: isSmall ? '1.25rem' : '1.5rem',
+          fontSize: isSmall ? 13 : 16,
+          color: 'var(--color-text)',
+          letterSpacing: '-0.02em',
+          display: 'inline-block',
+        }}
+      >{value}</span>
+      <button
+        type="button"
+        onPointerDown={e => { e.preventDefault(); e.stopPropagation(); onChange(Math.min(99, value + 1)) }}
+        className={`${isSmall ? 'w-7 h-7 text-base' : 'w-8 h-8 text-lg'} rounded-full flex items-center justify-center font-bold active:opacity-50`}
+        style={btnStyle}
+        aria-label="increase"
+      >+</button>
     </div>
   )
 }

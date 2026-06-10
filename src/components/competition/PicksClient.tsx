@@ -663,7 +663,7 @@ function MatchPickCard({ match, draft, error, locked, onDraft, onAdvancing, onSa
     else if (actualResult === pickResult)
       resultBadge = <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(239,67,35,0.15)', color: 'var(--color-gold)' }}>Result ✓{ptsLabel}</span>
     else
-      resultBadge = <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(229,57,53,0.1)', color: '#ef5350' }}>Miss</span>
+      resultBadge = <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(229,57,53,0.1)', color: '#ef5350' }}>Miss{ptsLabel}</span>
   }
 
   return (
