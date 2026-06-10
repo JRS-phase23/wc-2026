@@ -56,31 +56,26 @@ export default async function DashboardPage() {
     })
     .slice(0, 5)
 
-  // Per-competition: compute my rank
+  // Per-competition: compute my rank — all competitions queried in parallel
+  const compStatsList = await Promise.all(
+    allComps.map(async comp => {
+      const [{ data: members }, { data: compPicks }] = await Promise.all([
+        supabase.from('competition_members').select('user_id').eq('competition_id', comp.id),
+        supabase.from('picks').select('*').eq('competition_id', comp.id),
+      ])
+      const memberIds = (members ?? []).map(m => m.user_id)
+      const compPicksAll = (compPicks ?? []) as Pick[]
+      const scores = memberIds.map(uid => ({
+        uid,
+        pts: scoreAllPicks(compPicksAll.filter(p => p.user_id === uid), allMatches)
+               .reduce((s, p) => s + p.points, 0),
+      })).sort((a, b) => b.pts - a.pts)
+      const myIdx = scores.findIndex(s => s.uid === user.id)
+      return { id: comp.id, rank: myIdx + 1, total: memberIds.length, pts: scores[myIdx]?.pts ?? 0 }
+    })
+  )
   const compStats: Record<string, { rank: number; total: number; pts: number }> = {}
-  for (const comp of allComps) {
-    const { data: members } = await supabase
-      .from('competition_members')
-      .select('user_id')
-      .eq('competition_id', comp.id)
-
-    const memberIds = (members ?? []).map(m => m.user_id)
-    const { data: compPicks } = await supabase
-      .from('picks')
-      .select('*')
-      .eq('competition_id', comp.id)
-
-    const compPicksAll = (compPicks ?? []) as Pick[]
-    const scores = memberIds.map(uid => ({
-      uid,
-      pts: scoreAllPicks(compPicksAll.filter(p => p.user_id === uid), allMatches)
-             .reduce((s, p) => s + p.points, 0),
-    })).sort((a, b) => b.pts - a.pts)
-
-    const myIdx = scores.findIndex(s => s.uid === user.id)
-    const myPts = scores[myIdx]?.pts ?? 0
-    compStats[comp.id] = { rank: myIdx + 1, total: memberIds.length, pts: myPts }
-  }
+  for (const s of compStatsList) compStats[s.id] = { rank: s.rank, total: s.total, pts: s.pts }
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6">
