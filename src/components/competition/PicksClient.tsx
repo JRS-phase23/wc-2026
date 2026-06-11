@@ -252,7 +252,7 @@ export default function PicksClient({
       </div>
     )}
 
-    <div className="max-w-lg mx-auto px-4 py-6" style={{ paddingBottom: (!locked && (!submitted || editingStage === activeStage)) ? '6rem' : undefined }}>
+    <div className="max-w-lg mx-auto px-4 py-6" style={{ paddingBottom: (!locked && (!submitted || editingStage === activeStage)) ? '10rem' : undefined }}>
       {/* Header */}
       <div className="mb-5 animate-fade-in">
         <Link href={`/competition/${competitionId}`}
@@ -482,9 +482,10 @@ export default function PicksClient({
     {/* ── Sticky submit bar ──────────────────────────────────────────────── */}
     {!locked && stageView === 'picks' && (!submitted || editingStage === activeStage) && (
       <div
-        className="fixed bottom-0 left-0 right-0 z-40 px-4 pt-3"
+        className="fixed left-0 right-0 z-50 px-4 pt-3"
         style={{
-          paddingBottom: 'max(0.875rem, env(safe-area-inset-bottom))',
+          bottom: 'calc(50px + max(env(safe-area-inset-bottom), 8px))',
+          paddingBottom: '0.875rem',
           background: 'linear-gradient(to top, var(--color-bg) 65%, transparent)',
         }}
       >
