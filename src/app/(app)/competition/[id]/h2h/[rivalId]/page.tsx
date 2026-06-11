@@ -202,9 +202,18 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
 
       {/* Match by match */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-dim)' }}>
+        <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-dim)' }}>
           Match by Match
         </p>
+
+        {/* Sticky player-label header — aligns with pick score columns */}
+        <div className="sticky z-20 flex items-center px-3 py-2 gap-2 mb-2 rounded-xl"
+          style={{ top: 52, background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+          <div className="flex-1 text-xs font-bold" style={{ color: 'var(--color-gold)' }}>You</div>
+          <div className="text-xs flex-shrink-0" style={{ color: 'transparent', userSelect: 'none' }}>vs</div>
+          <div className="flex-1 text-xs font-bold text-right truncate" style={{ color: 'var(--color-text-dim)' }}>{rivalName}</div>
+        </div>
+
         <div className="space-y-2">
           {/* Completed — result + picks + points */}
           {completedMatches.map(match => {
@@ -263,26 +272,24 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function MatchHeader({ match, pending }: { match: Match; pending?: boolean }) {
+  const homeName = match.home_team?.name ?? match.home_label ?? '?'
+  const awayName = match.away_team?.name ?? match.away_label ?? '?'
   return (
-    <div className="flex items-center justify-between px-3 py-2"
+    <div className="flex items-center justify-center gap-1 px-3 py-1.5"
       style={{ background: 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
-      <div className="flex items-center gap-1.5 flex-1 min-w-0">
-        {match.home_team?.flag_code && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={getFlagUrl(match.home_team.flag_code)} alt="" className="w-4 h-3 object-cover rounded-sm flex-shrink-0" />
-        )}
-        <span className="text-xs truncate" style={{ color: 'var(--color-text)' }}>{match.home_team?.name ?? match.home_label}</span>
-      </div>
-      <span className="text-sm font-bold mx-2 flex-shrink-0" style={{ color: 'var(--color-text)' }}>
-        {pending ? '–' : `${match.home_score}–${match.away_score}`}
+      {match.home_team?.flag_code && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={getFlagUrl(match.home_team.flag_code)} alt="" className="w-4 h-3 object-cover rounded-sm flex-shrink-0" />
+      )}
+      <span className="text-xs font-medium flex-shrink truncate" style={{ color: 'var(--color-text)', maxWidth: 80 }}>{homeName}</span>
+      <span className="text-xs font-bold flex-shrink-0 px-1" style={{ color: pending ? 'var(--color-text-dim)' : 'var(--color-text)' }}>
+        {pending ? 'vs' : `${match.home_score}–${match.away_score}`}
       </span>
-      <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
-        <span className="text-xs truncate text-right" style={{ color: 'var(--color-text)' }}>{match.away_team?.name ?? match.away_label}</span>
-        {match.away_team?.flag_code && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={getFlagUrl(match.away_team.flag_code)} alt="" className="w-4 h-3 object-cover rounded-sm flex-shrink-0" />
-        )}
-      </div>
+      <span className="text-xs font-medium flex-shrink truncate" style={{ color: 'var(--color-text)', maxWidth: 80 }}>{awayName}</span>
+      {match.away_team?.flag_code && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={getFlagUrl(match.away_team.flag_code)} alt="" className="w-4 h-3 object-cover rounded-sm flex-shrink-0" />
+      )}
     </div>
   )
 }
