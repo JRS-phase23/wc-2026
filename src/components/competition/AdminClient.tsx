@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { STAGE_LABELS, STAGE_ORDER } from '@/lib/scoring'
 import { formatKickoff, getFlagUrl } from '@/lib/utils'
 import type { Match, CompetitionMember, Stage } from '@/types'
-import { Check, Trash2, Users, ClipboardList, Pencil, AlertTriangle } from 'lucide-react'
+import { Check, Trash2, Users, ClipboardList, Pencil, AlertTriangle, RefreshCw } from 'lucide-react'
 import CopyCodeButton from './CopyCodeButton'
 
 interface Props {
@@ -150,6 +150,7 @@ export default function AdminClient({ competitionId, competitionName, joinCode, 
 
 // ── Results entry tab ─────────────────────────────────────────────────────
 function ResultsTab({ matches }: { matches: Match[] }) {
+  const router = useRouter()
   const [activeStage, setActiveStage] = useState<Stage>(() => {
     for (const s of STAGE_ORDER) {
       const stageMatches = matches.filter(m => m.stage === s)
@@ -157,11 +158,50 @@ function ResultsTab({ matches }: { matches: Match[] }) {
     }
     return 'group'
   })
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<string | null>(null)
+
+  async function syncResults() {
+    setSyncing(true)
+    setSyncResult(null)
+    try {
+      const res = await fetch('/api/sync-results', { method: 'POST', credentials: 'include' })
+      const data = await res.json()
+      if (!res.ok) {
+        setSyncResult(`Error: ${data.error ?? res.statusText}`)
+      } else {
+        setSyncResult(`Synced — ${data.updated} updated, ${data.linked} newly linked, ${data.skipped} skipped`)
+        router.refresh()
+      }
+    } catch {
+      setSyncResult('Network error — sync failed')
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const stageMatches = matches.filter(m => m.stage === activeStage)
 
   return (
     <div>
+      {/* Sync button */}
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          onClick={syncResults}
+          disabled={syncing}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium disabled:opacity-50 transition-all"
+          style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-dim)' }}
+        >
+          <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+          {syncing ? 'Syncing…' : 'Sync results'}
+        </button>
+        {syncResult && (
+          <span className="text-xs" style={{ color: syncResult.startsWith('Error') ? '#ef5350' : 'var(--color-text-dim)' }}>
+            {syncResult}
+          </span>
+        )}
+      </div>
+
       {/* Stage selector */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-4 no-scrollbar">
         {STAGE_ORDER.map(stage => {
