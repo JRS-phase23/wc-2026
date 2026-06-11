@@ -430,7 +430,7 @@ export default function PicksClient({
             <TournamentWinnerPicker
               teams={allTeams}
               selectedTeamId={tournamentTeamId}
-              locked={!!stageLocks['group']}
+              locked={!!stageLocks['r16']}
               saving={savingTournament}
               onPick={saveTournamentPick}
               onClear={() => setTournamentTeamId(null)}
@@ -948,7 +948,7 @@ function TournamentWinnerPicker({
             🏆 Tournament Winner
           </p>
           <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-dim)' }}>
-            {locked ? 'Locked — picks are final' : `+25 bonus pts · locks at kickoff`}
+            {locked ? 'Locked — picks are final' : `+25 bonus pts · locks before Round of 16`}
           </p>
         </div>
         {selected && (
