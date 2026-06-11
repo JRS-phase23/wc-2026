@@ -9,6 +9,7 @@ import type { Stage, Match, Pick } from '@/types'
 import { Settings, Target, Eye } from 'lucide-react'
 import { TOURNAMENT_WINNER_BONUS } from '@/lib/scoring'
 import CopyCodeButton from '@/components/competition/CopyCodeButton'
+import { isStageLocked, getStageFirstKickoff, formatKickoff } from '@/lib/utils'
 
 export default async function CompetitionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -119,6 +120,17 @@ export default async function CompetitionPage({ params }: { params: Promise<{ id
   const myEntry = leaderboard.find(e => e.user_id === user.id)
   const isAdmin = comp.admin_id === user.id
 
+  // Find the first unlocked stage where this user is missing picks
+  const userPicks = allPicks.filter(p => p.user_id === user.id)
+  const actionStage = STAGE_ORDER.find(stage => {
+    const scheduled = allMatches.filter(m => m.stage === stage && m.status === 'scheduled')
+    if (!scheduled.length) return false
+    if (isStageLocked(allMatches, stage)) return false
+    const picked = userPicks.filter(p => scheduled.some(m => m.id === p.match_id)).length
+    return picked < scheduled.length
+  }) as Stage | undefined
+  const actionDeadline = actionStage ? getStageFirstKickoff(allMatches, actionStage) : null
+
   // Stage progress
   const completedByStage: Record<string, { done: number; total: number }> = {}
   for (const stage of STAGE_ORDER) {
@@ -198,6 +210,29 @@ export default async function CompetitionPage({ params }: { params: Promise<{ id
         </div>
         <span className="text-lg" style={{ color: 'var(--color-gold)' }}>›</span>
       </Link>
+
+      {/* Picks-needed CTA — shown when user has unpicked scheduled matches */}
+      {actionStage && actionDeadline && (
+        <div className="px-4 py-4 rounded-2xl mb-5 animate-fade-in"
+          style={{ background: 'rgba(239,67,35,0.1)', border: '1px solid rgba(239,67,35,0.35)' }}>
+          <p className="text-xs font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--color-gold)' }}>
+            ⏰ Picks needed
+          </p>
+          <p className="text-sm font-semibold mb-0.5" style={{ color: 'var(--color-text)' }}>
+            You haven&apos;t submitted {STAGE_LABELS[actionStage]} picks yet
+          </p>
+          <p className="text-xs mb-3" style={{ color: 'var(--color-text-dim)' }}>
+            Deadline: <span style={{ color: 'var(--color-gold)', fontWeight: 600 }}>{formatKickoff(actionDeadline)}</span>
+          </p>
+          <Link
+            href={`/competition/${id}/picks`}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-90"
+            style={{ background: 'var(--color-gold)', color: '#0A0A0F' }}
+          >
+            Make picks →
+          </Link>
+        </div>
+      )}
 
       {/* Stage progress */}
       <StageProgressBar completedByStage={completedByStage} />

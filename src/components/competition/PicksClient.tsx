@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { STAGE_LABELS, STAGE_ORDER, scorePick, getMaxPossiblePoints } from '@/lib/scoring'
-import { formatKickoff, formatCountdown, getFlagUrl, buildGroupStandings } from '@/lib/utils'
+import { formatKickoff, formatCountdown, getFlagUrl, buildGroupStandings, getStageFirstKickoff } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Match, Pick, Stage, Team, StageSubmission, TournamentPrediction } from '@/types'
-import { Lock, Check, ChevronDown, ChevronUp, Send, Pencil, AlertCircle, LayoutList, TableProperties, ArrowLeft } from 'lucide-react'
+import { Lock, Check, ChevronDown, ChevronUp, Send, Pencil, AlertCircle, LayoutList, TableProperties, ArrowLeft, Info } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
@@ -64,14 +64,25 @@ export default function PicksClient({
     new Set(stageSubmissions.map(s => s.stage as Stage))
   )
   const [submitting, setSubmitting] = useState(false)
-  const [submitBanner, setSubmitBanner] = useState<Stage | null>(null)
+  const [successStage, setSuccessStage] = useState<Stage | null>(null)
   const [editingStage, setEditingStage] = useState<Stage | null>(null)
+  const [scoringOpen, setScoringOpen] = useState(false)
   const [stageView, setStageView] = useState<StageView>('picks')
   const [tournamentTeamId, setTournamentTeamId] = useState<number | null>(tournamentPrediction?.team_id ?? null)
   const [savingTournament, setSavingTournament] = useState(false)
 
   // Debounce timer refs for global save status
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Auto-redirect after success overlay
+  useEffect(() => {
+    if (!successStage) return
+    const t = setTimeout(() => {
+      setSuccessStage(null)
+      router.push(`/competition/${competitionId}`)
+    }, 3500)
+    return () => clearTimeout(t)
+  }, [successStage, router, competitionId])
 
   function setDraft(matchId: number, field: 'home' | 'away', value: string) {
     const clean = value.replace(/\D/g, '').slice(0, 2)
@@ -154,9 +165,8 @@ export default function PicksClient({
     setSubmitting(false)
     if (!subError) {
       setSubmissions(prev => new Set([...prev, stage]))
-      setSubmitBanner(stage)
       setSaveStatus('saved')
-      setTimeout(() => setSubmitBanner(null), 5000)
+      setSuccessStage(stage)
     }
   }
 
@@ -196,8 +206,53 @@ export default function PicksClient({
 
   const groupStandings = buildGroupStandings(matches)
 
+  // Deadline for the active stage
+  const activeDeadline = getStageFirstKickoff(matches, activeStage)
+
   return (
-    <div className="max-w-lg mx-auto px-4 py-6">
+    <>
+    {/* ── Success overlay ──────────────────────────────────────────────── */}
+    {successStage && (
+      <div className="fixed inset-0 z-[100] overflow-hidden flex flex-col items-center justify-center text-center px-6"
+        style={{ background: 'var(--color-bg)' }}>
+        {/* Vintage celebration photo */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          backgroundImage: "url('/images/vintage-wc-celebration.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 40%',
+          opacity: 0.2,
+          filter: 'grayscale(1)',
+          mixBlendMode: 'screen',
+        }} />
+        {/* Green bloom */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse 110% 55% at 50% 0%, rgba(0,160,100,0.55) 0%, transparent 65%)',
+        }} />
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="text-6xl mb-5">✅</div>
+          <h1 className="text-4xl font-bold mb-2" style={{ color: '#fff' }}>Picks locked in!</h1>
+          <p className="text-lg mb-1 font-medium" style={{ color: 'rgba(255,255,255,0.75)' }}>
+            {STAGE_LABELS[successStage]}
+          </p>
+          <p className="text-sm mb-10" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            You can still edit picks until the first match kicks off
+          </p>
+          <button
+            onClick={() => { setSuccessStage(null); router.push(`/competition/${competitionId}`) }}
+            className="px-8 py-4 rounded-2xl font-bold text-base transition-opacity hover:opacity-80"
+            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff' }}
+          >
+            ← Back to {competitionName}
+          </button>
+          <p className="text-xs mt-5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            Redirecting in a moment…
+          </p>
+        </div>
+      </div>
+    )}
+
+    <div className="max-w-lg mx-auto px-4 py-6" style={{ paddingBottom: (!locked && (!submitted || editingStage === activeStage)) ? '6rem' : undefined }}>
       {/* Header */}
       <div className="mb-5 animate-fade-in">
         <Link href={`/competition/${competitionId}`}
@@ -210,17 +265,6 @@ export default function PicksClient({
 
       {/* Global save status bar */}
       <SaveStatusBar status={saveStatus} />
-
-      {/* Submit success banner */}
-      {submitBanner && (
-        <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl mb-4 animate-slide-up"
-          style={{ background: 'rgba(0,135,90,0.15)', border: '1px solid rgba(0,135,90,0.35)', color: 'var(--color-green-score)' }}>
-          <Check size={16} />
-          <span className="text-sm font-semibold">
-            {STAGE_LABELS[submitBanner]} picks submitted!
-          </span>
-        </div>
-      )}
 
       {/* Stage tabs */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-1 no-scrollbar">
@@ -284,6 +328,31 @@ export default function PicksClient({
         </button>
       </div>
 
+      {/* Scoring guide — collapsible */}
+      {stageView === 'picks' && (
+        <div className="mb-4 rounded-xl overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+          <button
+            onClick={() => setScoringOpen(o => !o)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-semibold"
+            style={{ background: 'var(--color-surface-2)', color: 'var(--color-text-dim)' }}
+          >
+            <span className="flex items-center gap-1.5"><Info size={12} /> How scoring works</span>
+            {scoringOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </button>
+          {scoringOpen && (
+            <div className="px-3.5 py-3 space-y-1.5 text-xs" style={{ background: 'var(--color-surface)' }}>
+              <div className="flex justify-between"><span style={{ color: 'var(--color-text)' }}>🎯 Exact scoreline</span><span className="font-bold" style={{ color: 'var(--color-gold)' }}>20 pts</span></div>
+              <div className="flex justify-between"><span style={{ color: 'var(--color-text-dim)' }}>✓ Correct result + goal diff</span><span className="font-bold" style={{ color: 'var(--color-text-dim)' }}>10 pts</span></div>
+              <div className="flex justify-between"><span style={{ color: 'var(--color-text-dim)' }}>✓ Correct result only</span><span className="font-bold" style={{ color: 'var(--color-text-dim)' }}>5 pts</span></div>
+              <div className="flex justify-between"><span style={{ color: 'var(--color-text-dim)' }}>≈ Close score (4+ goal game, off by ≤1)</span><span className="font-bold" style={{ color: 'var(--color-text-dim)' }}>+3 pts</span></div>
+              <div className="pt-1" style={{ borderTop: '1px solid var(--color-border)' }} />
+              <div className="flex justify-between"><span style={{ color: 'var(--color-text-dim)' }}>🥊 Knockout: correct advancing team</span><span className="font-bold" style={{ color: 'var(--color-text-dim)' }}>+10 pts</span></div>
+              <div className="flex justify-between"><span style={{ color: 'var(--color-text-dim)' }}>🏆 Tournament winner prediction</span><span className="font-bold" style={{ color: 'var(--color-gold)' }}>+25 pts</span></div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Stage points summary */}
       {stageView === 'picks' && (() => {
         const completed = stageMatches.filter(m => m.status === 'completed')
@@ -343,6 +412,19 @@ export default function PicksClient({
       {/* PICKS VIEW */}
       {stageView === 'picks' && (
         <>
+          {/* Tournament winner urgency callout */}
+          {activeStage === 'group' && !tournamentTeamId && !stageLocks['group'] && (
+            <div className="mb-3 px-4 py-3 rounded-2xl animate-fade-in"
+              style={{ background: 'rgba(239,67,35,0.12)', border: '1px solid rgba(239,67,35,0.35)' }}>
+              <p className="text-xs font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--color-gold)' }}>
+                Don&apos;t miss this!
+              </p>
+              <p className="text-sm" style={{ color: 'var(--color-text)' }}>
+                Pick your tournament winner for <span style={{ color: 'var(--color-gold)', fontWeight: 700 }}>+25 bonus pts</span>
+              </p>
+            </div>
+          )}
+
           {/* Tournament winner — shown only on group stage, before matches */}
           {activeStage === 'group' && (
             <TournamentWinnerPicker
@@ -386,45 +468,49 @@ export default function PicksClient({
             </div>
           )}
 
-          {/* SUBMIT button */}
-          {!locked && !submitted && (
-            <div className="mt-8 pb-4">
-              <button
-                onClick={() => submitStage(activeStage)}
-                disabled={submitting}
-                className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
-                style={{ background: 'var(--color-gold)', color: '#0A0A0F' }}
-              >
-                <Send size={16} />
-                {submitting ? 'Submitting…' : `Submit ${STAGE_LABELS[activeStage]} Picks`}
-              </button>
-              <p className="text-xs text-center mt-2" style={{ color: 'var(--color-text-dim)' }}>
-                You can edit picks until the first match of this stage kicks off.
-              </p>
-            </div>
-          )}
-
-          {/* Re-submit prompt when editing a previously submitted stage */}
+          {/* Re-submit editing notice (inline, no button — button is sticky) */}
           {!locked && submitted && editingStage === activeStage && (
-            <div className="mt-8 pb-4">
-              <div className="px-4 py-3 rounded-xl mb-3 text-sm"
-                style={{ background: 'rgba(239,67,35,0.08)', border: '1px solid rgba(239,67,35,0.2)', color: 'var(--color-gold)' }}>
-                You&apos;re editing previously submitted picks. Re-submit when you&apos;re done.
-              </div>
-              <button
-                onClick={() => { submitStage(activeStage); setEditingStage(null) }}
-                disabled={submitting}
-                className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
-                style={{ background: 'var(--color-gold)', color: '#0A0A0F' }}
-              >
-                <Send size={16} />
-                {submitting ? 'Submitting…' : `Re-submit ${STAGE_LABELS[activeStage]} Picks`}
-              </button>
+            <div className="mt-6 px-4 py-3 rounded-xl text-sm"
+              style={{ background: 'rgba(239,67,35,0.08)', border: '1px solid rgba(239,67,35,0.2)', color: 'var(--color-gold)' }}>
+              You&apos;re editing previously submitted picks. Tap <strong>Re-submit</strong> when you&apos;re done.
             </div>
           )}
         </>
       )}
     </div>
+
+    {/* ── Sticky submit bar ──────────────────────────────────────────────── */}
+    {!locked && stageView === 'picks' && (!submitted || editingStage === activeStage) && (
+      <div
+        className="fixed bottom-0 left-0 right-0 z-40 px-4 pt-3"
+        style={{
+          paddingBottom: 'max(0.875rem, env(safe-area-inset-bottom))',
+          background: 'linear-gradient(to top, var(--color-bg) 65%, transparent)',
+        }}
+      >
+        <div className="max-w-lg mx-auto">
+          <button
+            onClick={() => { submitStage(activeStage); if (editingStage) setEditingStage(null) }}
+            disabled={submitting}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
+            style={{ background: 'var(--color-gold)', color: '#0A0A0F' }}
+          >
+            <Send size={16} />
+            {submitting
+              ? 'Submitting…'
+              : editingStage === activeStage
+              ? `Re-submit ${STAGE_LABELS[activeStage]} Picks`
+              : `Submit ${STAGE_LABELS[activeStage]} Picks`}
+          </button>
+          <p className="text-xs text-center mt-1.5" style={{ color: 'var(--color-text-dim)' }}>
+            {activeDeadline
+              ? `Locks ${formatKickoff(activeDeadline)} · scores save automatically`
+              : 'Scores save automatically as you type'}
+          </p>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 
