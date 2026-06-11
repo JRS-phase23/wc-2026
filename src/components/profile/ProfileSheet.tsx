@@ -14,7 +14,7 @@ interface Props {
 
 export default function ProfileSheet({ profile, onClose, onSaved }: Props) {
   const [teamName, setTeamName] = useState(profile.team_name)
-  const [iconKey, setIconKey] = useState(profile.icon_key ?? 'ball-classic')
+  const [iconKey, setIconKey] = useState(profile.icon_key ?? 'football')
   const [iconUrl, setIconUrl] = useState<string | null>(profile.icon_url ?? null)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -96,7 +96,7 @@ export default function ProfileSheet({ profile, onClose, onSaved }: Props) {
 
       {/* Sheet */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl px-5 pt-5 pb-10 animate-slide-up"
+        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl px-5 pt-5 pb-10 animate-slide-up overflow-y-auto max-h-[90dvh]"
         style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
       >
         {/* Handle */}

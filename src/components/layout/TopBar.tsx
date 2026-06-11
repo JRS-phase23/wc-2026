@@ -75,7 +75,7 @@ export default function TopBar() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={profile.icon_url} alt="" className="w-6 h-6 rounded-full object-cover" />
                 ) : (
-                  <SoccerIcon iconKey={profile.icon_key ?? 'ball-classic'} size={18} color="#EF4323" />
+                  <SoccerIcon iconKey={profile.icon_key ?? 'football'} size={18} color="#EF4323" />
                 )}
               </div>
             </>
