@@ -73,7 +73,6 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
   let matchesCompared = 0
 
   for (const match of allMatches) {
-    if (!isLocked(match.kickoff_at)) continue
     const mp = myPickMap.get(match.id)
     const rp = rivalPickMap.get(match.id)
     if (!mp || !rp) continue
@@ -103,10 +102,9 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
     return { stage, myPts, rivalPts, hasMatches }
   }).filter(s => s.hasMatches)
 
-  // All locked matches (picks visible), sorted by match_number
-  const lockedMatches = allMatches.filter(m => isLocked(m.kickoff_at))
-  const completedMatches = lockedMatches.filter(m => m.status === 'completed')
-  const inProgressMatches = lockedMatches.filter(m => m.status !== 'completed')
+  const completedMatches = allMatches.filter(m => m.status === 'completed')
+  const inProgressMatches = allMatches.filter(m => isLocked(m.kickoff_at) && m.status !== 'completed')
+  const upcomingMatches = allMatches.filter(m => !isLocked(m.kickoff_at))
 
   const myName = 'You'
   const rivalName = rivalProfile?.team_name ?? 'Rival'
@@ -203,51 +201,61 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
       )}
 
       {/* Match by match */}
-      {lockedMatches.length === 0 ? (
-        <p className="text-center py-8 text-sm" style={{ color: 'var(--color-text-dim)' }}>
-          No matches have kicked off yet
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-dim)' }}>
+          Match by Match
         </p>
-      ) : (
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-dim)' }}>
-            Match by Match
-          </p>
-          <div className="space-y-2">
-            {/* Completed matches — show result + picks + points */}
-            {completedMatches.map(match => {
-              const mySP = myScoredMap.get(match.id) ?? null
-              const rivalSP = rivalScoredMap.get(match.id) ?? null
-              return (
-                <div key={match.id} className="rounded-xl overflow-hidden"
-                  style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-                  <MatchHeader match={match} />
-                  <div className="flex items-center px-3 py-2 gap-2">
-                    <PickCell sp={mySP} isMe />
-                    <div className="text-xs flex-shrink-0" style={{ color: 'var(--color-text-dim)' }}>vs</div>
-                    <PickCell sp={rivalSP} align="right" />
-                  </div>
+        <div className="space-y-2">
+          {/* Completed — result + picks + points */}
+          {completedMatches.map(match => {
+            const mySP = myScoredMap.get(match.id) ?? null
+            const rivalSP = rivalScoredMap.get(match.id) ?? null
+            return (
+              <div key={match.id} className="rounded-xl overflow-hidden"
+                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                <MatchHeader match={match} />
+                <div className="flex items-center px-3 py-2 gap-2">
+                  <PickCell sp={mySP} isMe />
+                  <div className="text-xs flex-shrink-0" style={{ color: 'var(--color-text-dim)' }}>vs</div>
+                  <PickCell sp={rivalSP} align="right" />
                 </div>
-              )
-            })}
-            {/* Locked but not yet completed — show picks without result */}
-            {inProgressMatches.map(match => {
-              const myRaw = myPickMap.get(match.id) ?? null
-              const rvRaw = rivalPickMap.get(match.id) ?? null
-              return (
-                <div key={match.id} className="rounded-xl overflow-hidden"
-                  style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', opacity: 0.75 }}>
-                  <MatchHeader match={match} pending />
-                  <div className="flex items-center px-3 py-2 gap-2">
-                    <RawPickCell pick={myRaw} isMe />
-                    <div className="text-xs flex-shrink-0" style={{ color: 'var(--color-text-dim)' }}>vs</div>
-                    <RawPickCell pick={rvRaw} align="right" />
-                  </div>
+              </div>
+            )
+          })}
+          {/* Kicked off, not yet complete — picks without result */}
+          {inProgressMatches.map(match => {
+            const myRaw = myPickMap.get(match.id) ?? null
+            const rvRaw = rivalPickMap.get(match.id) ?? null
+            return (
+              <div key={match.id} className="rounded-xl overflow-hidden"
+                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', opacity: 0.75 }}>
+                <MatchHeader match={match} pending />
+                <div className="flex items-center px-3 py-2 gap-2">
+                  <RawPickCell pick={myRaw} isMe />
+                  <div className="text-xs flex-shrink-0" style={{ color: 'var(--color-text-dim)' }}>vs</div>
+                  <RawPickCell pick={rvRaw} align="right" />
                 </div>
-              )
-            })}
-          </div>
+              </div>
+            )
+          })}
+          {/* Upcoming — picks side by side, no result yet */}
+          {upcomingMatches.map(match => {
+            const myRaw = myPickMap.get(match.id) ?? null
+            const rvRaw = rivalPickMap.get(match.id) ?? null
+            return (
+              <div key={match.id} className="rounded-xl overflow-hidden"
+                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                <MatchHeader match={match} pending />
+                <div className="flex items-center px-3 py-2 gap-2">
+                  <RawPickCell pick={myRaw} isMe />
+                  <div className="text-xs flex-shrink-0" style={{ color: 'var(--color-text-dim)' }}>vs</div>
+                  <RawPickCell pick={rvRaw} align="right" />
+                </div>
+              </div>
+            )
+          })}
         </div>
-      )}
+      </div>
     </div>
   )
 }
