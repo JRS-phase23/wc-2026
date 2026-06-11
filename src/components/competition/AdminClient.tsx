@@ -409,6 +409,8 @@ function ScoreStep({ value, onChange, size = 'normal' }: {
       <button
         type="button"
         onPointerDown={e => { e.preventDefault(); e.stopPropagation(); onChange(Math.max(0, value - 1)) }}
+        onTouchStart={e => e.preventDefault()}
+        tabIndex={-1}
         className={`${isSmall ? 'w-7 h-7 text-base' : 'w-8 h-8 text-lg'} rounded-full flex items-center justify-center font-bold active:opacity-50`}
         style={btnStyle}
         aria-label="decrease"
@@ -426,6 +428,8 @@ function ScoreStep({ value, onChange, size = 'normal' }: {
       <button
         type="button"
         onPointerDown={e => { e.preventDefault(); e.stopPropagation(); onChange(Math.min(99, value + 1)) }}
+        onTouchStart={e => e.preventDefault()}
+        tabIndex={-1}
         className={`${isSmall ? 'w-7 h-7 text-base' : 'w-8 h-8 text-lg'} rounded-full flex items-center justify-center font-bold active:opacity-50`}
         style={btnStyle}
         aria-label="increase"

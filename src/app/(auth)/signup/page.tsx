@@ -15,6 +15,7 @@ export default function SignupPage() {
   const [teamName, setTeamName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [needsConfirmation, setNeedsConfirmation] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -22,19 +23,49 @@ export default function SignupPage() {
     setLoading(true)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
+    const emailRedirectTo = typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
+      : undefined
+
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { team_name: teamName.trim() } },
+      options: {
+        data: { team_name: teamName.trim() },
+        emailRedirectTo,
+      },
     })
 
     if (error) {
       setError(error.message)
       setLoading(false)
+    } else if (!data.session) {
+      // Email confirmation required — user must click the link in their inbox
+      setLoading(false)
+      setNeedsConfirmation(true)
     } else {
       router.push(next)
       router.refresh()
     }
+  }
+
+  if (needsConfirmation) {
+    return (
+      <div className="page-bloom-alt min-h-dvh flex flex-col items-center justify-center px-6 py-16" style={{ background: 'var(--color-bg)' }}>
+        <div className="w-full max-w-sm animate-slide-up text-center">
+          <div className="text-4xl mb-4">📧</div>
+          <h1 className="text-2xl font-bold mb-3" style={{ color: 'var(--color-text)' }}>Check your email</h1>
+          <p className="text-sm leading-relaxed mb-6" style={{ color: 'var(--color-text-dim)' }}>
+            We sent a confirmation link to <strong style={{ color: 'var(--color-text)' }}>{email}</strong>.
+            Click it to confirm your account
+            {isJoining ? ' and you\'ll be joined to the game automatically.' : '.'}
+          </p>
+          <p className="text-xs" style={{ color: 'var(--color-text-dim)', opacity: 0.6 }}>
+            Didn&apos;t get it? Check your spam folder.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (

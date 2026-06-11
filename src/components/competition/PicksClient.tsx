@@ -428,20 +428,23 @@ export default function PicksClient({
   )
 }
 
-// ── Global save status bar ────────────────────────────────────────────────────
+// ── Global save status bar — fixed toast at bottom, no layout shift ───────────
 function SaveStatusBar({ status }: { status: SaveStatus }) {
   if (status === 'idle') return null
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2 rounded-xl mb-4 text-xs font-medium transition-all"
+      className="fixed bottom-5 left-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-medium shadow-lg"
       style={{
+        transform: 'translateX(-50%)',
         background: status === 'saved'
-          ? 'rgba(0,135,90,0.12)'
+          ? 'rgba(0,135,90,0.95)'
           : status === 'error'
-          ? 'rgba(229,57,53,0.12)'
-          : 'rgba(255,255,255,0.05)',
-        border: `1px solid ${status === 'saved' ? 'rgba(0,135,90,0.3)' : status === 'error' ? 'rgba(229,57,53,0.3)' : 'var(--color-border)'}`,
-        color: status === 'saved' ? 'var(--color-green-score)' : status === 'error' ? '#ef5350' : 'var(--color-text-dim)',
+          ? 'rgba(229,57,53,0.95)'
+          : 'rgba(30,30,40,0.95)',
+        border: `1px solid ${status === 'saved' ? 'rgba(0,135,90,0.5)' : status === 'error' ? 'rgba(229,57,53,0.5)' : 'var(--color-border)'}`,
+        color: status === 'saved' ? '#fff' : status === 'error' ? '#fff' : 'var(--color-text-dim)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}
     >
       {status === 'saving' && <span className="animate-pulse">●</span>}
@@ -803,6 +806,8 @@ function ScoreInput({ value, onChange, onSave }: {
     <div className="flex items-center gap-1" style={{ touchAction: 'manipulation' }}>
       <button
         onPointerDown={e => { e.preventDefault(); e.stopPropagation(); adjust(-1) }}
+        onTouchStart={e => e.preventDefault()}
+        tabIndex={-1}
         className="w-9 h-9 rounded-full flex items-center justify-center text-xl font-bold active:opacity-50"
         style={btnStyle}
         aria-label="decrease"
@@ -821,6 +826,8 @@ function ScoreInput({ value, onChange, onSave }: {
 
       <button
         onPointerDown={e => { e.preventDefault(); e.stopPropagation(); adjust(1) }}
+        onTouchStart={e => e.preventDefault()}
+        tabIndex={-1}
         className="w-9 h-9 rounded-full flex items-center justify-center text-xl font-bold active:opacity-50"
         style={btnStyle}
         aria-label="increase"
