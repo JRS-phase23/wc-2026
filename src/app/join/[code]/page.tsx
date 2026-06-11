@@ -44,10 +44,33 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
       .single()
 
     if (!existing) {
-      await supabase.from('competition_members').insert({
+      const { error: joinError } = await supabase.from('competition_members').insert({
         competition_id: comp.id,
         user_id: user.id,
       })
+
+      if (joinError) {
+        console.error('[join] insert failed', { code: joinError.code, message: joinError.message, userId: user.id, compId: comp.id })
+        return (
+          <div className="min-h-dvh flex flex-col items-center justify-center px-5 py-12 text-center"
+            style={{ background: 'var(--color-bg)' }}>
+            <div className="text-4xl mb-4">⚠️</div>
+            <h1 className="text-xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>
+              Couldn&apos;t join
+            </h1>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-text-dim)' }}>
+              Something went wrong adding you to <strong>{comp.name}</strong>.
+            </p>
+            <p className="text-xs mb-6 font-mono px-4 py-2 rounded-lg"
+              style={{ background: 'var(--color-surface-2)', color: '#ef5350' }}>
+              {joinError.message}
+            </p>
+            <Link href="/dashboard" style={{ color: 'var(--color-gold)' }} className="text-sm font-semibold">
+              Go to dashboard →
+            </Link>
+          </div>
+        )
+      }
     }
     redirect(`/competition/${comp.id}`)
   }
