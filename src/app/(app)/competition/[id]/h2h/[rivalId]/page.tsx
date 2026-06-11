@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { scorePick, scoreAllPicks, STAGE_LABELS, STAGE_ORDER, TOURNAMENT_WINNER_BONUS } from '@/lib/scoring'
-import { getFlagUrl } from '@/lib/utils'
+import { getFlagUrl, isLocked } from '@/lib/utils'
 import type { Match, Pick, Stage } from '@/types'
 import { ArrowLeft } from 'lucide-react'
 
@@ -20,7 +20,6 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
     .from('competition_members').select('user_id').eq('competition_id', id).eq('user_id', user.id).single()
   if (!membership) redirect(`/competition/${id}`)
 
-  // Load rival profile
   const { data: rivalProfile } = await supabase
     .from('profiles').select('team_name').eq('id', rivalId).single()
 
@@ -51,7 +50,6 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
     }
   }
 
-  // Score all picks using same logic as leaderboard
   const myScoredAll = scoreAllPicks(myPicks, allMatches)
   const rivalScoredAll = scoreAllPicks(rivalPicks, allMatches)
 
@@ -61,12 +59,39 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
   const myTotal = myScoredAll.reduce((s, p) => s + p.points, 0) + myTournamentBonus
   const rivalTotal = rivalScoredAll.reduce((s, p) => s + p.points, 0) + rivalTournamentBonus
 
-  // Build match index for stage breakdown + match-by-match
   const matchMap = new Map(allMatches.map(m => [m.id, m]))
   const myScoredMap = new Map(myScoredAll.map(s => [s.match_id, s]))
   const rivalScoredMap = new Map(rivalScoredAll.map(s => [s.match_id, s]))
 
-  const completedMatches = allMatches.filter(m => m.status === 'completed')
+  // ── Agreement stats ───────────────────────────────────────────────────────
+  const myPickMap = new Map(myPicks.map(p => [p.match_id, p]))
+  const rivalPickMap = new Map(rivalPicks.map(p => [p.match_id, p]))
+
+  let agreedWinner = 0
+  let exactSame = 0
+  let bothCorrect = 0
+  let matchesCompared = 0
+
+  for (const match of allMatches) {
+    if (!isLocked(match.kickoff_at)) continue
+    const mp = myPickMap.get(match.id)
+    const rp = rivalPickMap.get(match.id)
+    if (!mp || !rp) continue
+    matchesCompared++
+
+    const myW = mp.home_score_pick > mp.away_score_pick ? 'H' : mp.home_score_pick < mp.away_score_pick ? 'A' : 'D'
+    const rvW = rp.home_score_pick > rp.away_score_pick ? 'H' : rp.home_score_pick < rp.away_score_pick ? 'A' : 'D'
+    if (myW === rvW) agreedWinner++
+    if (mp.home_score_pick === rp.home_score_pick && mp.away_score_pick === rp.away_score_pick) exactSame++
+
+    if (match.status === 'completed') {
+      const ms = myScoredMap.get(match.id)
+      const rs = rivalScoredMap.get(match.id)
+      const myGot = (ms?.points ?? 0) > 0
+      const rvGot = (rs?.points ?? 0) > 0
+      if (myGot && rvGot) bothCorrect++
+    }
+  }
 
   // Points by stage
   const stageBreakdown = STAGE_ORDER.map(stage => {
@@ -77,6 +102,11 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
     const hasMatches = allMatches.some(m => m.stage === stage && m.status === 'completed')
     return { stage, myPts, rivalPts, hasMatches }
   }).filter(s => s.hasMatches)
+
+  // All locked matches (picks visible), sorted by match_number
+  const lockedMatches = allMatches.filter(m => isLocked(m.kickoff_at))
+  const completedMatches = lockedMatches.filter(m => m.status === 'completed')
+  const inProgressMatches = lockedMatches.filter(m => m.status !== 'completed')
 
   const myName = 'You'
   const rivalName = rivalProfile?.team_name ?? 'Rival'
@@ -100,7 +130,7 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
       </div>
 
       {/* Overall scoreboard */}
-      <div className="rounded-2xl p-5 mb-6 flex items-center"
+      <div className="rounded-2xl p-5 mb-4 flex items-center"
         style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
         <div className="flex-1 text-center">
           <div className="text-3xl font-bold" style={{ color: 'var(--color-gold)' }}>{myTotal}</div>
@@ -124,6 +154,25 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
           <div className="text-xs mt-1 font-semibold truncate" style={{ color: 'var(--color-text-dim)' }}>{rivalName}</div>
         </div>
       </div>
+
+      {/* Pick agreement stats */}
+      {matchesCompared > 0 && (
+        <div className="rounded-2xl px-4 py-3 mb-6 grid grid-cols-3 gap-2 text-center"
+          style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+          <div>
+            <div className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{agreedWinner}</div>
+            <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-dim)' }}>same winner</div>
+          </div>
+          <div style={{ borderLeft: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)' }}>
+            <div className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{exactSame}</div>
+            <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-dim)' }}>exact same score</div>
+          </div>
+          <div>
+            <div className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{bothCorrect}</div>
+            <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-dim)' }}>both correct</div>
+          </div>
+        </div>
+      )}
 
       {/* Stage breakdown */}
       {stageBreakdown.length > 0 && (
@@ -154,9 +203,9 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
       )}
 
       {/* Match by match */}
-      {completedMatches.length === 0 ? (
+      {lockedMatches.length === 0 ? (
         <p className="text-center py-8 text-sm" style={{ color: 'var(--color-text-dim)' }}>
-          No completed matches yet
+          No matches have kicked off yet
         </p>
       ) : (
         <div>
@@ -164,39 +213,34 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
             Match by Match
           </p>
           <div className="space-y-2">
+            {/* Completed matches — show result + picks + points */}
             {completedMatches.map(match => {
               const mySP = myScoredMap.get(match.id) ?? null
               const rivalSP = rivalScoredMap.get(match.id) ?? null
-
               return (
                 <div key={match.id} className="rounded-xl overflow-hidden"
                   style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-                  {/* Match result */}
-                  <div className="flex items-center justify-between px-3 py-2"
-                    style={{ background: 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
-                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                      {match.home_team?.flag_code && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={getFlagUrl(match.home_team.flag_code)} alt="" className="w-4 h-3 object-cover rounded-sm flex-shrink-0" />
-                      )}
-                      <span className="text-xs truncate" style={{ color: 'var(--color-text)' }}>{match.home_team?.name ?? match.home_label}</span>
-                    </div>
-                    <span className="text-sm font-bold mx-2 flex-shrink-0" style={{ color: 'var(--color-text)' }}>
-                      {match.home_score}–{match.away_score}
-                    </span>
-                    <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
-                      <span className="text-xs truncate text-right" style={{ color: 'var(--color-text)' }}>{match.away_team?.name ?? match.away_label}</span>
-                      {match.away_team?.flag_code && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={getFlagUrl(match.away_team.flag_code)} alt="" className="w-4 h-3 object-cover rounded-sm flex-shrink-0" />
-                      )}
-                    </div>
-                  </div>
-                  {/* Picks row */}
+                  <MatchHeader match={match} />
                   <div className="flex items-center px-3 py-2 gap-2">
-                    <PickCell sp={mySP} isMe label="You" />
+                    <PickCell sp={mySP} isMe />
                     <div className="text-xs flex-shrink-0" style={{ color: 'var(--color-text-dim)' }}>vs</div>
-                    <PickCell sp={rivalSP} label={rivalName} align="right" />
+                    <PickCell sp={rivalSP} align="right" />
+                  </div>
+                </div>
+              )
+            })}
+            {/* Locked but not yet completed — show picks without result */}
+            {inProgressMatches.map(match => {
+              const myRaw = myPickMap.get(match.id) ?? null
+              const rvRaw = rivalPickMap.get(match.id) ?? null
+              return (
+                <div key={match.id} className="rounded-xl overflow-hidden"
+                  style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', opacity: 0.75 }}>
+                  <MatchHeader match={match} pending />
+                  <div className="flex items-center px-3 py-2 gap-2">
+                    <RawPickCell pick={myRaw} isMe />
+                    <div className="text-xs flex-shrink-0" style={{ color: 'var(--color-text-dim)' }}>vs</div>
+                    <RawPickCell pick={rvRaw} align="right" />
                   </div>
                 </div>
               )
@@ -208,9 +252,36 @@ export default async function H2HPage({ params }: { params: Promise<{ id: string
   )
 }
 
-function PickCell({ sp, isMe, label, align = 'left' }: {
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function MatchHeader({ match, pending }: { match: Match; pending?: boolean }) {
+  return (
+    <div className="flex items-center justify-between px-3 py-2"
+      style={{ background: 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
+      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+        {match.home_team?.flag_code && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={getFlagUrl(match.home_team.flag_code)} alt="" className="w-4 h-3 object-cover rounded-sm flex-shrink-0" />
+        )}
+        <span className="text-xs truncate" style={{ color: 'var(--color-text)' }}>{match.home_team?.name ?? match.home_label}</span>
+      </div>
+      <span className="text-sm font-bold mx-2 flex-shrink-0" style={{ color: 'var(--color-text)' }}>
+        {pending ? '–' : `${match.home_score}–${match.away_score}`}
+      </span>
+      <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
+        <span className="text-xs truncate text-right" style={{ color: 'var(--color-text)' }}>{match.away_team?.name ?? match.away_label}</span>
+        {match.away_team?.flag_code && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={getFlagUrl(match.away_team.flag_code)} alt="" className="w-4 h-3 object-cover rounded-sm flex-shrink-0" />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PickCell({ sp, isMe, align = 'left' }: {
   sp: { home_score_pick: number; away_score_pick: number; points: number; breakdown: { exact: number; result: number } } | null
-  isMe?: boolean; label: string; align?: 'left' | 'right'
+  isMe?: boolean; align?: 'left' | 'right'
 }) {
   if (!sp) return <div className="flex-1 text-xs" style={{ color: 'var(--color-text-dim)', textAlign: align }}>No pick</div>
   const isExact = sp.breakdown.exact > 0
@@ -224,6 +295,19 @@ function PickCell({ sp, isMe, label, align = 'left' }: {
       {sp.points > 0 && (
         <span className="text-xs ml-1" style={{ color }}>+{sp.points}</span>
       )}
+    </div>
+  )
+}
+
+function RawPickCell({ pick, isMe, align = 'left' }: {
+  pick: Pick | null; isMe?: boolean; align?: 'left' | 'right'
+}) {
+  if (!pick) return <div className="flex-1 text-xs" style={{ color: 'var(--color-text-dim)', textAlign: align }}>No pick</div>
+  return (
+    <div className="flex-1" style={{ textAlign: align }}>
+      <span className="font-mono text-sm font-bold" style={{ color: isMe ? 'var(--color-gold)' : 'var(--color-text-dim)' }}>
+        {pick.home_score_pick}–{pick.away_score_pick}
+      </span>
     </div>
   )
 }
